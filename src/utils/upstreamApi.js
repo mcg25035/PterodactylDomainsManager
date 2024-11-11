@@ -6,5 +6,4 @@ module.exports = {
     // createSubdomain: async (fullDomain, targetIp, targetPort) => { /* 實作 */ },
     // updateSubdomain: async (fullDomain, targetIp, targetPort) => { /* 實作 */ },
     // deleteSubdomain: async (fullDomain) => { /* 實作 */ },
-  };
-  
+};
