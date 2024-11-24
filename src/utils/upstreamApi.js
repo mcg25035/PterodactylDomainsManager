@@ -47,13 +47,21 @@ const getRecordName = (fullDomain) => {
 const createSrvRecord = async (recordName) => {
     const srvName = `_minecraft._tcp.${recordName}`;
     const srvTarget = `${recordName}.${ZONE_NAME}`; // e.g., mc0001.mcstw.top
-    const srvContent = `0 5 ${FIXED_PORT} ${srvTarget}.`; // 添加尾部的點
-    
+    const srvData = {
+        service: "_minecraft",
+        proto: "_tcp",
+        name: recordName,
+        priority: 0,
+        weight: 5,
+        port: parseInt(FIXED_PORT, 10),
+        target: `${srvTarget}.` // 添加尾部的點
+    };
+
     try {
         const response = await cloudflareApi.post(`/zones/${CLOUDFLARE_ZONE_ID}/dns_records`, {
             type: 'SRV',
             name: srvName,
-            content: srvContent,
+            data: srvData,
             ttl: 1, // Auto
             proxied: false,
         });
@@ -63,9 +71,17 @@ const createSrvRecord = async (recordName) => {
         }
         return response.data.result;
     } catch (error) {
-        throw new Error(`Failed to create SRV record: ${error.message}`);
+        if (error.response) {
+            const errorMessage = error.response.data.errors.map((e) => e.message).join(', ');
+            console.error(`Cloudflare API Error: ${errorMessage}`);
+            throw new Error(`Failed to create SRV record: ${errorMessage}`);
+        } else {
+            console.error(`Error: ${error.message}`);
+            throw new Error(`Failed to create SRV record: ${error.message}`);
+        }
     }
 };
+
 
 
 /**
