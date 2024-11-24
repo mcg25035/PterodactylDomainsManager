@@ -161,13 +161,13 @@ const deleteDomain = async (id) => {
     if (index === -1) return false;
 
     const removedDomain = data.domains.splice(index, 1)[0];
-    const fullDomain = `${removedDomain.thirdLevelDomain}.${secondLevelDomain}`;
+    const subdomain = removedDomain.thirdLevelDomain; // 只傳遞子域名
 
     try {
-        // Call upstream API to delete subdomain
-        await upstreamApi.deleteSubdomain(fullDomain);
+        // 呼叫上游 API 刪除子域名
+        await upstreamApi.deleteSubdomain(subdomain);
 
-        // Write updated data
+        // 寫入更新後的數據
         writeData(data);
 
         return true;
@@ -175,6 +175,7 @@ const deleteDomain = async (id) => {
         throw new Error(`Error deleting domain: ${error.message}`);
     }
 };
+
 
 module.exports = {
     getAllDomains,
