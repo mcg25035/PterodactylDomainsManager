@@ -8,32 +8,15 @@ const dotenv = require('dotenv');
 dotenv.config();
 
 // Destructure required environment variables
-const {
-    CLOUDFLARE_API_TOKEN,
-    CLOUDFLARE_ZONE_ID,
-    CLOUDFLARE_SRV_SERVICE,
-    CLOUDFLARE_SRV_PROTOCOL,
-    CLOUDFLARE_SRV_PRIORITY,
-    CLOUDFLARE_SRV_WEIGHT,
-    CLOUDFLARE_SRV_TARGET,
-    CLOUDFLARE_A_RECORD_IP,
-} = process.env;
+const { CLOUDFLARE_API_TOKEN, CLOUDFLARE_ZONE_ID, FIXED_IP, FIXED_PORT } = process.env;
 
 // Validate environment variables
-if (
-    !CLOUDFLARE_API_TOKEN ||
-    !CLOUDFLARE_ZONE_ID ||
-    !CLOUDFLARE_SRV_SERVICE ||
-    !CLOUDFLARE_SRV_PROTOCOL ||
-    !CLOUDFLARE_SRV_PRIORITY ||
-    !CLOUDFLARE_SRV_WEIGHT ||
-    !CLOUDFLARE_SRV_TARGET ||
-    !CLOUDFLARE_A_RECORD_IP
-) {
-    throw new Error(
-        'Missing required environment variables: CLOUDFLARE_API_TOKEN, CLOUDFLARE_ZONE_ID, CLOUDFLARE_SRV_SERVICE, CLOUDFLARE_SRV_PROTOCOL, CLOUDFLARE_SRV_PRIORITY, CLOUDFLARE_SRV_WEIGHT, CLOUDFLARE_SRV_TARGET, CLOUDFLARE_A_RECORD_IP'
-    );
+if (!CLOUDFLARE_API_TOKEN || !CLOUDFLARE_ZONE_ID || !FIXED_IP || !FIXED_PORT) {
+    throw new Error('Missing required environment variables: CLOUDFLARE_API_TOKEN, CLOUDFLARE_ZONE_ID, FIXED_IP, and FIXED_PORT');
 }
+
+// Define the zone name
+const ZONE_NAME = 'mcstw.top'; // Adjust as needed or make it an environment variable
 
 // Create an Axios instance with Cloudflare API base URL and headers
 const cloudflareApi = axios.create({
@@ -45,29 +28,92 @@ const cloudflareApi = axios.create({
 });
 
 /**
- * Helper function to determine if the domain starts with 'mc'
- * @param {string} fullDomain - The full domain name (e.g., mc.example.com)
- * @returns {boolean} - True if domain starts with 'mc.', else false
+ * Helper function to extract the record name relative to the zone.
+ * @param {string} fullDomain - The full domain name (e.g., mc0001.mcstw.top)
+ * @returns {string} - The record name relative to the zone (e.g., mc0001)
  */
-const isMcSubdomain = (fullDomain) => {
-    const subdomain = fullDomain.split('.')[0];
-    return subdomain.startsWith('mc');
+const getRecordName = (fullDomain) => {
+    if (fullDomain.endsWith(`.${ZONE_NAME}`)) {
+        return fullDomain.slice(0, -ZONE_NAME.length - 1); // Remove the zone and the dot
+    }
+    return fullDomain; // If not matching, return as is
 };
 
 /**
- * Helper function to extract the record name relative to the zone.
- * @param {string} fullDomain - The full domain name (e.g., sub.mcstw.top or mc.mcstw.top)
- * @returns {string} - The record name relative to the zone
+ * Helper function to create an SRV record for Minecraft
+ * @param {string} recordName - The subdomain name (e.g., mc0001)
+ * @returns {Promise<Object>} - The created SRV record
  */
-const getRecordName = (fullDomain) => {
-    const zone = 'mcstw.top'; // 固定區域名稱
+const createSrvRecord = async (recordName) => {
+    const srvName = `_minecraft._tcp.${recordName}`;
+    const srvTarget = `${recordName}.${ZONE_NAME}`;
+    const srvContent = `0 5 ${FIXED_PORT} ${srvTarget}`;
 
-    if (fullDomain.endsWith(zone)) {
-        const subdomain = fullDomain.slice(0, -zone.length - 1); // 移除區域名稱和點
-        return subdomain;
+    try {
+        const response = await cloudflareApi.post(`/zones/${CLOUDFLARE_ZONE_ID}/dns_records`, {
+            type: 'SRV',
+            name: srvName,
+            content: srvContent,
+            ttl: 1, // Auto
+            proxied: false,
+        });
+
+        if (!response.data.success) {
+            throw new Error(response.data.errors.map((e) => e.message).join(', '));
+        }
+        return response.data.result;
+    } catch (error) {
+        throw new Error(`Failed to create SRV record: ${error.message}`);
     }
+};
 
-    return fullDomain; // If not matching, return as is
+/**
+ * Helper function to update an SRV record for Minecraft
+ * @param {Object} existingRecord - The existing SRV record object
+ * @returns {Promise<Object>} - The updated SRV record
+ */
+const updateSrvRecord = async (existingRecord) => {
+    const srvName = existingRecord.name; // Should be _minecraft._tcp.mc0001
+    const contentParts = existingRecord.content.split(' ');
+    if (contentParts.length < 4) {
+        throw new Error(`Invalid SRV record content: ${existingRecord.content}`);
+    }
+    const target = contentParts[3];
+    const srvContent = `0 5 ${FIXED_PORT} ${target}`;
+
+    try {
+        const response = await cloudflareApi.put(`/zones/${CLOUDFLARE_ZONE_ID}/dns_records/${existingRecord.id}`, {
+            type: 'SRV',
+            name: srvName,
+            content: srvContent,
+            ttl: existingRecord.ttl,
+            proxied: existingRecord.proxied,
+        });
+
+        if (!response.data.success) {
+            throw new Error(response.data.errors.map((e) => e.message).join(', '));
+        }
+        return response.data.result;
+    } catch (error) {
+        throw new Error(`Failed to update SRV record: ${error.message}`);
+    }
+};
+
+/**
+ * Helper function to delete an SRV record
+ * @param {Object} existingRecord - The existing SRV record object
+ * @returns {Promise<void>}
+ */
+const deleteSrvRecord = async (existingRecord) => {
+    try {
+        const response = await cloudflareApi.delete(`/zones/${CLOUDFLARE_ZONE_ID}/dns_records/${existingRecord.id}`);
+
+        if (!response.data.success) {
+            throw new Error(response.data.errors.map((e) => e.message).join(', '));
+        }
+    } catch (error) {
+        throw new Error(`Failed to delete SRV record: ${error.message}`);
+    }
 };
 
 /**
@@ -77,199 +123,169 @@ const getRecordName = (fullDomain) => {
 const fetchDnsRecords = async () => {
     try {
         const response = await cloudflareApi.get(`/zones/${CLOUDFLARE_ZONE_ID}/dns_records`);
-        if (response.data.success) {
-            return response.data.result;
+        if (!response.data.success) {
+            throw new Error(response.data.errors.map((e) => e.message).join(', '));
         }
-        throw new Error(response.data.errors.map((e) => e.message).join(', '));
+        return response.data.result;
     } catch (error) {
         throw new Error(`Failed to fetch DNS records: ${error.message}`);
     }
 };
 
 /**
- * Find DNS record by full domain name and type
- * @param {string} fullDomain - The full domain name (e.g., mc.mcstw.top)
- * @param {string} type - DNS record type ('SRV' or 'A')
+ * Find DNS record by full domain name
+ * @param {string} fullDomain - The full domain name (e.g., mc0001.mcstw.top)
+ * @param {string} type - The DNS record type ('A' or 'SRV')
  * @returns {Promise<Object|null>} - DNS record object or null if not found
  */
-const findDnsRecord = async (fullDomain, type) => {
+const findDnsRecord = async (fullDomain, type = 'A') => {
     const records = await fetchDnsRecords();
     const recordName = getRecordName(fullDomain);
     return records.find((record) => record.name === recordName && record.type === type) || null;
 };
 
+/**
+ * Find SRV DNS record by full domain name
+ * @param {string} fullDomain - The full domain name (e.g., mc0001.mcstw.top)
+ * @returns {Promise<Object|null>} - SRV DNS record object or null if not found
+ */
+const findSrvRecord = async (fullDomain) => {
+    const recordName = getRecordName(fullDomain);
+    const srvName = `_minecraft._tcp.${recordName}`;
+    const records = await fetchDnsRecords();
+    return records.find((record) => record.name === srvName && record.type === 'SRV') || null;
+};
+
 module.exports = {
     /**
-     * Create a new subdomain by adding a DNS SRV or A record based on the subdomain prefix
-     * @param {string} fullDomain - The full domain name to create (e.g., mc.mcstw.top or sub.mcstw.top)
-     * @param {number} targetPort - The target port (used for SRV records)
-     * @returns {Promise<Object>} - The created DNS record
+     * Create a new subdomain by adding a DNS A record
+     * If the subdomain starts with 'mc', it points to FIXED_IP and creates an SRV record
+     * @param {string} fullDomain - The full domain name to create (e.g., mc0001.mcstw.top)
+     * @param {string} targetIp - The target IP address (ignored if domain starts with 'mc')
+     * @returns {Promise<Object>} - The created DNS record(s)
      */
-    createSubdomain: async (fullDomain, targetPort) => {
+    createSubdomain: async (fullDomain, targetIp) => {
         try {
-            if (isMcSubdomain(fullDomain)) {
-                // Handle SRV record for 'mc' subdomains
-                const existingRecord = await findDnsRecord(fullDomain, 'SRV');
-                if (existingRecord) {
-                    throw new Error(`Subdomain ${fullDomain} already exists as SRV record.`);
-                }
+            const isMcSubdomain = fullDomain.startsWith('mc');
 
-                const recordName = `${CLOUDFLARE_SRV_SERVICE}.${CLOUDFLARE_SRV_PROTOCOL}.${getRecordName(fullDomain)}`;
-
-                // Create DNS SRV record
-                const response = await cloudflareApi.post(`/zones/${CLOUDFLARE_ZONE_ID}/dns_records`, {
-                    type: 'SRV',
-                    name: recordName,
-                    data: {
-                        priority: parseInt(CLOUDFLARE_SRV_PRIORITY, 10),
-                        weight: parseInt(CLOUDFLARE_SRV_WEIGHT, 10),
-                        port: targetPort,
-                        target: CLOUDFLARE_SRV_TARGET,
-                    },
-                    ttl: 1, // Auto TTL
-                    proxied: false,
-                });
-
-                if (response.data.success) {
-                    return response.data.result;
-                }
-                throw new Error(response.data.errors.map((e) => e.message).join(', '));
-            } else {
-                // Handle A record for other subdomains
-                const existingRecord = await findDnsRecord(fullDomain, 'A');
-                if (existingRecord) {
-                    throw new Error(`Subdomain ${fullDomain} already exists as A record.`);
-                }
-
-                const recordName = getRecordName(fullDomain);
-
-                // Create DNS A record
-                const response = await cloudflareApi.post(`/zones/${CLOUDFLARE_ZONE_ID}/dns_records`, {
-                    type: 'A',
-                    name: recordName,
-                    content: CLOUDFLARE_A_RECORD_IP,
-                    ttl: 1, // Auto TTL
-                    proxied: false,
-                });
-
-                if (response.data.success) {
-                    return response.data.result;
-                }
-                throw new Error(response.data.errors.map((e) => e.message).join(', '));
+            // Check if the subdomain already exists
+            const existingARecord = await findDnsRecord(fullDomain, 'A');
+            if (existingARecord) {
+                throw new Error(`Subdomain ${fullDomain} already exists.`);
             }
+
+            const recordName = getRecordName(fullDomain);
+            const ipToUse = isMcSubdomain ? FIXED_IP : targetIp;
+
+            // Create DNS A record
+            const aRecordResponse = await cloudflareApi.post(`/zones/${CLOUDFLARE_ZONE_ID}/dns_records`, {
+                type: 'A',
+                name: recordName,
+                content: ipToUse,
+                ttl: 1, // Auto
+                proxied: false,
+            });
+
+            if (!aRecordResponse.data.success) {
+                throw new Error(aRecordResponse.data.errors.map((e) => e.message).join(', '));
+            }
+
+            const createdARecord = aRecordResponse.data.result;
+
+            if (!isMcSubdomain) {
+                return { aRecord: createdARecord, srvRecord: null };
+            }
+
+            const createdSrvRecord = await createSrvRecord(recordName);
+            return { aRecord: createdARecord, srvRecord: createdSrvRecord };
         } catch (error) {
             throw new Error(`Failed to create subdomain: ${error.message}`);
         }
     },
 
     /**
-     * Update an existing subdomain's IP address or port based on the subdomain prefix
-     * @param {string} fullDomain - The full domain name to update (e.g., mc.mcstw.top or sub.mcstw.top)
-     * @param {number} targetPort - The new target port (used for SRV records)
-     * @returns {Promise<Object>} - The updated DNS record
+     * Update an existing subdomain's IP address
+     * If the subdomain starts with 'mc', it updates to FIXED_IP and updates the SRV record
+     * @param {string} fullDomain - The full domain name to update (e.g., mc0001.mcstw.top)
+     * @param {string} targetIp - The new target IP address (ignored if domain starts with 'mc')
+     * @returns {Promise<Object>} - The updated DNS record(s)
      */
-    updateSubdomain: async (fullDomain, targetPort) => {
+    updateSubdomain: async (fullDomain, targetIp) => {
         try {
-            if (isMcSubdomain(fullDomain)) {
-                // Handle SRV record for 'mc' subdomains
-                const existingRecord = await findDnsRecord(fullDomain, 'SRV');
-                if (!existingRecord) {
-                    throw new Error(`Subdomain ${fullDomain} does not exist as SRV record.`);
-                }
+            const isMcSubdomain = fullDomain.startsWith('mc');
 
-                const recordName = `${CLOUDFLARE_SRV_SERVICE}.${CLOUDFLARE_SRV_PROTOCOL}.${getRecordName(fullDomain)}`;
-
-                // Update DNS SRV record
-                const response = await cloudflareApi.put(
-                    `/zones/${CLOUDFLARE_ZONE_ID}/dns_records/${existingRecord.id}`,
-                    {
-                        type: 'SRV',
-                        name: recordName,
-                        data: {
-                            priority: existingRecord.data.priority, // Keep existing priority
-                            weight: existingRecord.data.weight, // Keep existing weight
-                            port: targetPort, // Update port
-                            target: CLOUDFLARE_SRV_TARGET, // Keep existing target
-                        },
-                        ttl: existingRecord.ttl,
-                        proxied: existingRecord.proxied,
-                    }
-                );
-
-                if (response.data.success) {
-                    return response.data.result;
-                }
-                throw new Error(response.data.errors.map((e) => e.message).join(', '));
-            } else {
-                // Handle A record for other subdomains
-                const existingRecord = await findDnsRecord(fullDomain, 'A');
-                if (!existingRecord) {
-                    throw new Error(`Subdomain ${fullDomain} does not exist as A record.`);
-                }
-
-                const recordName = getRecordName(fullDomain);
-
-                // Update DNS A record
-                const response = await cloudflareApi.put(
-                    `/zones/${CLOUDFLARE_ZONE_ID}/dns_records/${existingRecord.id}`,
-                    {
-                        type: 'A',
-                        name: recordName,
-                        content: CLOUDFLARE_A_RECORD_IP,
-                        ttl: existingRecord.ttl,
-                        proxied: existingRecord.proxied,
-                    }
-                );
-
-                if (response.data.success) {
-                    return response.data.result;
-                }
-                throw new Error(response.data.errors.map((e) => e.message).join(', '));
+            // Find existing DNS A record
+            const existingARecord = await findDnsRecord(fullDomain, 'A');
+            if (!existingARecord) {
+                throw new Error(`Subdomain ${fullDomain} does not exist.`);
             }
+
+            const recordName = getRecordName(fullDomain);
+            const ipToUse = isMcSubdomain ? FIXED_IP : targetIp;
+
+            // Update DNS A record
+            const aRecordResponse = await cloudflareApi.put(
+                `/zones/${CLOUDFLARE_ZONE_ID}/dns_records/${existingARecord.id}`,
+                {
+                    type: 'A',
+                    name: recordName,
+                    content: ipToUse,
+                    ttl: existingARecord.ttl,
+                    proxied: existingARecord.proxied,
+                }
+            );
+
+            if (!aRecordResponse.data.success) {
+                throw new Error(aRecordResponse.data.errors.map((e) => e.message).join(', '));
+            }
+
+            const updatedARecord = aRecordResponse.data.result;
+
+            if (!isMcSubdomain) {
+                return { aRecord: updatedARecord, srvRecord: null };
+            }
+
+            const existingSrvRecord = await findSrvRecord(fullDomain);
+            const updatedSrvRecord = existingSrvRecord
+                ? await updateSrvRecord(existingSrvRecord)
+                : await createSrvRecord(recordName);
+
+            return { aRecord: updatedARecord, srvRecord: updatedSrvRecord };
         } catch (error) {
             throw new Error(`Failed to update subdomain: ${error.message}`);
         }
     },
 
     /**
-     * Delete an existing subdomain by removing its DNS SRV or A record based on the subdomain prefix
-     * @param {string} fullDomain - The full domain name to delete (e.g., mc.mcstw.top or sub.mcstw.top)
+     * Delete an existing subdomain by removing its DNS records
+     * If the subdomain starts with 'mc', it deletes both A and SRV records
+     * @param {string} fullDomain - The full domain name to delete (e.g., mc0001.mcstw.top)
      * @returns {Promise<void>}
      */
     deleteSubdomain: async (fullDomain) => {
         try {
-            if (isMcSubdomain(fullDomain)) {
-                // Handle SRV record for 'mc' subdomains
-                const existingRecord = await findDnsRecord(fullDomain, 'SRV');
-                if (!existingRecord) {
-                    throw new Error(`Subdomain ${fullDomain} does not exist as SRV record.`);
-                }
+            const isMcSubdomain = fullDomain.startsWith('mc');
 
-                // Delete DNS SRV record
-                const response = await cloudflareApi.delete(
-                    `/zones/${CLOUDFLARE_ZONE_ID}/dns_records/${existingRecord.id}`
-                );
+            // Find existing DNS A record
+            const existingARecord = await findDnsRecord(fullDomain, 'A');
+            if (!existingARecord) {
+                throw new Error(`Subdomain ${fullDomain} does not exist.`);
+            }
 
-                if (response.data.success) {
-                    return;
-                }
-                throw new Error(response.data.errors.map((e) => e.message).join(', '));
-            } else {
-                // Handle A record for other subdomains
-                const existingRecord = await findDnsRecord(fullDomain, 'A');
-                if (!existingRecord) {
-                    throw new Error(`Subdomain ${fullDomain} does not exist as A record.`);
-                }
+            // Delete DNS A record
+            const aRecordResponse = await cloudflareApi.delete(`/zones/${CLOUDFLARE_ZONE_ID}/dns_records/${existingARecord.id}`);
 
-                // Delete DNS A record
-                const response = await cloudflareApi.delete(
-                    `/zones/${CLOUDFLARE_ZONE_ID}/dns_records/${existingRecord.id}`
-                );
+            if (!aRecordResponse.data.success) {
+                throw new Error(aRecordResponse.data.errors.map((e) => e.message).join(', '));
+            }
 
-                if (response.data.success) {
-                    return;
-                }
-                throw new Error(response.data.errors.map((e) => e.message).join(', '));
+            if (!isMcSubdomain) {
+                return;
+            }
+
+            const existingSrvRecord = await findSrvRecord(fullDomain);
+            if (existingSrvRecord) {
+                await deleteSrvRecord(existingSrvRecord);
             }
         } catch (error) {
             throw new Error(`Failed to delete subdomain: ${error.message}`);
