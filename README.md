@@ -2,14 +2,14 @@
 
 ## API 概述
 
-| HTTP 方法 | 路徑                                | 說明                                   |
-|-----------|-------------------------------------|----------------------------------------|
-| GET       | `/api/domains`                      | 獲取所有三級網域                       |
-| GET       | `/api/domains/:id`                  | 根據網域 ID 獲取特定三級網域           |
-| POST      | `/api/domains`                      | 創建新的三級網域                       |
-| PUT       | `/api/domains/:id`                  | 更新特定的三級網域                     |
-| DELETE    | `/api/domains/:id`                  | 刪除特定的三級網域                     |
-| GET       | `/api/servers/:serverId/domains`    | 根據伺服器 UUID 獲取相關的三級網域     |
+| HTTP 方法 | 路徑                                | 說明                                   |狀態|
+|-----------|-------------------------------------|----------------------------------------|-------|
+| GET       | `/api/domains`                      | 獲取所有三級網域                       |可用|
+| GET       | `/api/domains/:id`                  | 根據網域 ID 獲取特定三級網域           |未測試|
+| POST      | `/api/domains`                      | 創建新的三級網域                       |可用|
+| PUT       | `/api/domains/:id`                  | 更新特定的三級網域                     |未測試|
+| DELETE    | `/api/domains/:id`                  | 刪除特定的三級網域                     |可用|
+| GET       | `/api/servers/:serverId/domains`    | 根據伺服器 UUID 獲取相關的三級網域     |可用|
 
 以下將逐一詳細說明每個端點的參數和功能。
 
