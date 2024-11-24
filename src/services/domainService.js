@@ -161,7 +161,7 @@ const deleteDomain = async (id) => {
     if (index === -1) return false;
 
     const removedDomain = data.domains.splice(index, 1)[0];
-    const subdomain = removedDomain.thirdLevelDomain; // 只傳遞子域名
+    const subdomain = `${removedDomain.thirdLevelDomain}.${secondLevelDomain}`; 
 
     try {
         // 呼叫上游 API 刪除子域名
