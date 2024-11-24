@@ -169,18 +169,6 @@ const findDnsRecord = async (fullDomain, type = 'A') => {
     }) || null;
 };
 
-/**
- * Find SRV DNS record by full domain name
- * @param {string} fullDomain - The full domain name (e.g., mc0001.mcstw.top)
- * @returns {Promise<Object|null>} - SRV DNS record object or null if not found
- */
-const findSrvRecord = async (fullDomain) => {
-    const recordName = getRecordName(fullDomain);
-    const srvName = `_minecraft._tcp.${recordName}`;
-    const records = await fetchDnsRecords();
-    return records.find((record) => record.name === srvName && record.type === 'SRV') || null;
-};
-
 module.exports = {
     /**
      * Create a new subdomain by adding a DNS A record
@@ -270,7 +258,7 @@ module.exports = {
                 return { aRecord: updatedARecord, srvRecord: null };
             }
 
-            const existingSrvRecord = await findSrvRecord(fullDomain);
+            const existingSrvRecord = await findDnsRecord(fullDomain, 'SRV');
             const updatedSrvRecord = existingSrvRecord
                 ? await updateSrvRecord(existingSrvRecord)
                 : await createSrvRecord(recordName);
@@ -308,7 +296,7 @@ module.exports = {
                 return;
             }
 
-            const existingSrvRecord = await findSrvRecord(fullDomain);
+            const existingSrvRecord = await findDnsRecord(fullDomain, 'SRV');
             if (existingSrvRecord) {
                 await deleteSrvRecord(existingSrvRecord);
             }
