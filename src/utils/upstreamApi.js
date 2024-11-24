@@ -8,15 +8,15 @@ const dotenv = require('dotenv');
 dotenv.config();
 
 // Destructure required environment variables
-const { CLOUDFLARE_API_TOKEN, CLOUDFLARE_ZONE_ID, FIXED_IP, FIXED_PORT } = process.env;
+const { CLOUDFLARE_API_TOKEN, CLOUDFLARE_ZONE_ID, FIXED_IP, FIXED_PORT, SECOND_LEVEL_DOMAIN } = process.env;
 
 // Validate environment variables
-if (!CLOUDFLARE_API_TOKEN || !CLOUDFLARE_ZONE_ID || !FIXED_IP || !FIXED_PORT) {
-    throw new Error('Missing required environment variables: CLOUDFLARE_API_TOKEN, CLOUDFLARE_ZONE_ID, FIXED_IP, and FIXED_PORT');
+if (!CLOUDFLARE_API_TOKEN || !CLOUDFLARE_ZONE_ID || !FIXED_IP || !FIXED_PORT || !SECOND_LEVEL_DOMAIN) {
+    throw new Error('Missing required environment variables: CLOUDFLARE_API_TOKEN, CLOUDFLARE_ZONE_ID, FIXED_IP, FIXED_PORT, and SECOND_LEVEL_DOMAIN');
 }
 
 // Define the zone name
-const ZONE_NAME = 'mcstw.top'; // Adjust as needed or make it an environment variable
+const ZONE_NAME = SECOND_LEVEL_DOMAIN;
 
 // Create an Axios instance with Cloudflare API base URL and headers
 const cloudflareApi = axios.create({
