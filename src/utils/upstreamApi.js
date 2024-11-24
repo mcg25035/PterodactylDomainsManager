@@ -157,11 +157,7 @@ const fetchDnsRecords = async () => {
  */
 const findDnsRecord = async (fullDomain, type = 'A') => {
     const records = await fetchDnsRecords();
-    const recordName = getRecordName(fullDomain);
-    console.log(records);
-    console.log(recordName);
-    console.log(type);
-    return records.find((record) => record.name === recordName && record.type === type) || null;
+    return records.find((record) => record.name === fullDomain && record.type === type) || null;
 };
 
 /**
