@@ -2,3 +2,4 @@
 node_modules/
 service.sh
 .env
+.env.example
