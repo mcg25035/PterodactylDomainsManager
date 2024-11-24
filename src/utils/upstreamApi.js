@@ -46,9 +46,9 @@ const getRecordName = (fullDomain) => {
  */
 const createSrvRecord = async (recordName) => {
     const srvName = `_minecraft._tcp.${recordName}`;
-    const srvTarget = `${recordName}.${ZONE_NAME}`;
-    const srvContent = `0 5 ${FIXED_PORT} ${srvTarget}`;
-
+    const srvTarget = `${recordName}.${ZONE_NAME}`; // e.g., mc0001.mcstw.top
+    const srvContent = `0 5 ${FIXED_PORT} ${srvTarget}.`; // 添加尾部的點
+    
     try {
         const response = await cloudflareApi.post(`/zones/${CLOUDFLARE_ZONE_ID}/dns_records`, {
             type: 'SRV',
@@ -66,6 +66,7 @@ const createSrvRecord = async (recordName) => {
         throw new Error(`Failed to create SRV record: ${error.message}`);
     }
 };
+
 
 /**
  * Helper function to update an SRV record for Minecraft
