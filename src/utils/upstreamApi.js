@@ -161,7 +161,7 @@ const findDnsRecord = async (fullDomain, type = 'A') => {
     console.log(fullDomain);
     return records.find((record) => {
         if (record.type === 'SRV') {
-            return record.data.target === `${fullDomain}.`;
+            return record.data.target === fullDomain;
         }
         return record.name === fullDomain;
     }) || null;
