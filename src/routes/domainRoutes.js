@@ -38,4 +38,10 @@ router.delete('/domains/:id', [
     param('id').isUUID().withMessage('Invalid domain id format')
 ], domainController.deleteDomain);
 
+// 根據 thirdLevelDomain 獲取相關網域
+router.get('/domains/third/:thirdLevelDomain', [
+    param('thirdLevelDomain').isString().notEmpty().withMessage('Invalid thirdLevelDomain format')
+], domainController.getDomainsByThirdLevelDomain);
+
+
 module.exports = router;

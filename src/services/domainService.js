@@ -176,11 +176,22 @@ const deleteDomain = async (id) => {
     }
 };
 
+/**
+ * Get domains by third level domain
+ * @param {string} thirdLevelDomain - The third level domain (e.g. "mc0001")
+ * @returns {Array} - List of domains matching the specified third level domain
+ */
+const getDomainsByThirdLevelDomain = (thirdLevelDomain) => {
+    const data = readData();
+    return data.domains.filter(domain => domain.thirdLevelDomain === thirdLevelDomain);
+};
+
 
 module.exports = {
     getAllDomains,
     getDomainsByServerId,
     getDomainById,
+    getDomainsByThirdLevelDomain,
     createDomain,
     updateDomain,
     deleteDomain,

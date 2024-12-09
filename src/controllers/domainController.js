@@ -5,6 +5,27 @@ const { validationResult } = require('express-validator');
 require('dotenv').config();
 
 /**
+ * Get domains by third level domain
+ */
+const getDomainsByThirdLevelDomain = async (req, res) => {
+    try {
+        const { thirdLevelDomain } = req.params;
+        const domains = await domainService.getDomainsByThirdLevelDomain(thirdLevelDomain);
+        res.json(domains.map(domain => ({
+            id: domain.id,
+            serverId: domain.serverId,
+            domain: `${domain.thirdLevelDomain}.${process.env.SECOND_LEVEL_DOMAIN}`,
+            targetIp: domain.targetIp,
+            targetPort: domain.targetPort,
+            ...domain.otherData
+        })));
+    } catch (error) {
+        console.error(`Error fetching domains by thirdLevelDomain (${req.params.thirdLevelDomain}): ${error.message}`);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
+};
+
+/**
  * Get all domains
  */
 const getAllDomains = async (req, res) => {
@@ -157,6 +178,7 @@ module.exports = {
     getAllDomains,
     getDomainsByServerId,
     getDomainById,
+    getDomainsByThirdLevelDomain,
     createDomain,
     updateDomain,
     deleteDomain,
