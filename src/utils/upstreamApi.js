@@ -191,6 +191,9 @@ module.exports = {
             const recordName = getRecordName(fullDomain);
             const ipToUse = isMcSubdomain ? FIXED_IP : targetIp;
 
+            console.log(`recordName: ${recordName}, ipToUse: ${ipToUse}`);
+            
+
             // Create DNS A record
             const aRecordResponse = await cloudflareApi.post(`/zones/${CLOUDFLARE_ZONE_ID}/dns_records`, {
                 type: 'A',
