@@ -229,41 +229,14 @@ module.exports = {
         try {
             const isMcSubdomain = fullDomain.startsWith('mc');
 
-            // Find existing DNS A record
-            const existingARecord = await findDnsRecord(fullDomain, 'A');
-            if (!existingARecord) {
-                throw new Error(`Subdomain ${fullDomain} does not exist.`);
-            }
-
-            const recordName = getRecordName(newFullDomain);
-            const ipToUse = isMcSubdomain ? FIXED_IP : targetIp;
-
-            // Update DNS A record
-            const aRecordResponse = await cloudflareApi.put(`/zones/${CLOUDFLARE_ZONE_ID}/dns_records/${existingARecord.id}`, {
-                type: 'A',
-                name: recordName,
-                content: ipToUse,
-                ttl: existingARecord.ttl,
-                proxied: existingARecord.proxied,
-            });
-
-            if (!aRecordResponse.data.success) {
-                throw new Error(aRecordResponse.data.errors.map((e) => e.message).join(', '));
-            }
-
-            const updatedARecord = aRecordResponse.data.result;
+            this.deleteSubdomain(fullDomain);
+            const updatedARecord = (await this.createSubdomain(newFullDomain, targetIp))?.aRecord;
+            const updatedSrvRecord = await updateSrvRecord(existingSrvRecord, newFullDomain);
 
             if (!isMcSubdomain) {
                 return { aRecord: updatedARecord, srvRecord: null };
             }
-
-            // Find existing SRV record
-            const existingSrvRecord = await findDnsRecord(fullDomain, 'SRV');
-            if (!existingSrvRecord) {
-                throw new Error(`SRV record for subdomain ${fullDomain} does not exist.`);
-            }
-
-            const updatedSrvRecord = await updateSrvRecord(existingSrvRecord, newFullDomain);
+            
             return { aRecord: updatedARecord, srvRecord: updatedSrvRecord };
         } catch (error) {
             throw new Error(`Failed to update subdomain: ${error.message}`);
