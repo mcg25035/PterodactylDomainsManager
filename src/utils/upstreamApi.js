@@ -229,7 +229,7 @@ module.exports = {
         try {
             const isMcSubdomain = fullDomain.startsWith('mc');
 
-            this.deleteSubdomain(fullDomain);
+            await this.deleteSubdomain(fullDomain);
             const updatedARecord = (await this.createSubdomain(newFullDomain, targetIp))?.aRecord;
             const updatedSrvRecord = await updateSrvRecord(existingSrvRecord, newFullDomain);
 
