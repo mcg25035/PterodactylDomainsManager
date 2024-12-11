@@ -87,26 +87,26 @@ const createSrvRecord = async (recordName) => {
 /**
  * Helper function to update an SRV record for Minecraft
  * @param {Object} existingRecord - The existing SRV record object
+ * @param {string} newTarget - The new target domain name
  * @returns {Promise<Object>} - The updated SRV record
  */
 const updateSrvRecord = async (existingRecord) => {
     const srvName = existingRecord.name; // Should be _minecraft._tcp.mc0001
-    console.log("debug");
-    console.log(existingRecord);
-    console.log(existingRecord.content);
-    const contentParts = existingRecord.content.split(' ');
-    console.log(contentParts);
-    if (contentParts.length < 4) {
-        throw new Error(`Invalid SRV record content: ${existingRecord.content}`);
-    }
-    const target = contentParts[3];
-    const srvContent = `0 5 ${FIXED_PORT} ${target}`;
+    const srvData = {
+        service: "_minecraft",
+        proto: "_tcp",
+        name: srvName,
+        priority: 0,
+        weight: 5,
+        port: parseInt(FIXED_PORT, 10),
+        target: `${newTarget}.` // Use newTarget with a trailing dot
+    };
 
     try {
         const response = await cloudflareApi.put(`/zones/${CLOUDFLARE_ZONE_ID}/dns_records/${existingRecord.id}`, {
             type: 'SRV',
             name: srvName,
-            content: srvContent,
+            data: srvData,
             ttl: existingRecord.ttl,
             proxied: existingRecord.proxied,
         });
@@ -221,10 +221,11 @@ module.exports = {
      * Update an existing subdomain's IP address
      * If the subdomain starts with 'mc', it updates to FIXED_IP and updates the SRV record
      * @param {string} fullDomain - The full domain name to update (e.g., mc0001.mcstw.top)
+     * @param {string} newFullDomain - The new full domain name
      * @param {string} targetIp - The new target IP address (ignored if domain starts with 'mc')
      * @returns {Promise<Object>} - The updated DNS record(s)
      */
-    updateSubdomain: async (fullDomain, targetIp) => {
+    updateSubdomain: async (fullDomain, newFullDomain, targetIp) => {
         try {
             const isMcSubdomain = fullDomain.startsWith('mc');
 
@@ -234,20 +235,17 @@ module.exports = {
                 throw new Error(`Subdomain ${fullDomain} does not exist.`);
             }
 
-            const recordName = getRecordName(fullDomain);
+            const recordName = getRecordName(newFullDomain);
             const ipToUse = isMcSubdomain ? FIXED_IP : targetIp;
 
             // Update DNS A record
-            const aRecordResponse = await cloudflareApi.put(
-                `/zones/${CLOUDFLARE_ZONE_ID}/dns_records/${existingARecord.id}`,
-                {
-                    type: 'A',
-                    name: recordName,
-                    content: ipToUse,
-                    ttl: existingARecord.ttl,
-                    proxied: existingARecord.proxied,
-                }
-            );
+            const aRecordResponse = await cloudflareApi.put(`/zones/${CLOUDFLARE_ZONE_ID}/dns_records/${existingARecord.id}`, {
+                type: 'A',
+                name: recordName,
+                content: ipToUse,
+                ttl: existingARecord.ttl,
+                proxied: existingARecord.proxied,
+            });
 
             if (!aRecordResponse.data.success) {
                 throw new Error(aRecordResponse.data.errors.map((e) => e.message).join(', '));
@@ -259,11 +257,13 @@ module.exports = {
                 return { aRecord: updatedARecord, srvRecord: null };
             }
 
+            // Find existing SRV record
             const existingSrvRecord = await findDnsRecord(fullDomain, 'SRV');
-            const updatedSrvRecord = existingSrvRecord
-                ? await updateSrvRecord(existingSrvRecord)
-                : await createSrvRecord(recordName);
+            if (!existingSrvRecord) {
+                throw new Error(`SRV record for subdomain ${fullDomain} does not exist.`);
+            }
 
+            const updatedSrvRecord = await updateSrvRecord(existingSrvRecord, newFullDomain);
             return { aRecord: updatedARecord, srvRecord: updatedSrvRecord };
         } catch (error) {
             throw new Error(`Failed to update subdomain: ${error.message}`);
