@@ -91,9 +91,11 @@ const createSrvRecord = async (recordName) => {
  */
 const updateSrvRecord = async (existingRecord) => {
     const srvName = existingRecord.name; // Should be _minecraft._tcp.mc0001
+    console.log("debug");
+    console.log(existingRecord);
+    console.log(existingRecord.content);
     const contentParts = existingRecord.content.split(' ');
     console.log(contentParts);
-    console.log("debug");
     if (contentParts.length < 4) {
         throw new Error(`Invalid SRV record content: ${existingRecord.content}`);
     }
