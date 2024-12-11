@@ -232,6 +232,8 @@ module.exports = {
         try {
             const isMcSubdomain = fullDomain.startsWith('mc');
 
+            const existingSrvRecord = await findDnsRecord(fullDomain, 'SRV');
+
             await this.deleteSubdomain(fullDomain);
             const updatedARecord = (await this.createSubdomain(newFullDomain, targetIp))?.aRecord;
             const updatedSrvRecord = await updateSrvRecord(existingSrvRecord, newFullDomain);
