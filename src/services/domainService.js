@@ -124,6 +124,8 @@ const updateDomain = async (id, updatedData) => {
         // Write updated data
         writeData(data);
 
+        console.log("data.domains[index]", data.domains[index]);
+
         return data.domains[index];
     } catch (error) {
         throw new Error(`Error updating domain: ${error.message}`);
