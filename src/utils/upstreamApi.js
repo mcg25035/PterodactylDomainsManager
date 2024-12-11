@@ -90,7 +90,7 @@ const createSrvRecord = async (recordName) => {
  * @param {string} newTarget - The new target domain name
  * @returns {Promise<Object>} - The updated SRV record
  */
-const updateSrvRecord = async (existingRecord) => {
+const updateSrvRecord = async (existingRecord, newTarget) => {
     const srvName = existingRecord.name; // Should be _minecraft._tcp.mc0001
     const srvData = {
         service: "_minecraft",
