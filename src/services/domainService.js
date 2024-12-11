@@ -99,6 +99,7 @@ const updateDomain = async (id, updatedData) => {
     const domain = data.domains[index];
     const originalFullDomain = `${domain.thirdLevelDomain}.${secondLevelDomain}`;
     const newThirdLevelDomain = updatedData.thirdLevelDomain || domain.thirdLevelDomain;
+    console.log("newThirdLevelDomain", updatedData);
     console.log("newThirdLevelDomain", newThirdLevelDomain);
     const newFullDomain = `${newThirdLevelDomain}.${secondLevelDomain}`;
     const targetIp = updatedData.targetIp || domain.targetIp;
