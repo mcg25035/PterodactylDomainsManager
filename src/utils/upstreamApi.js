@@ -232,11 +232,14 @@ module.exports = {
         try {
             const isMcSubdomain = fullDomain.startsWith('mc');
 
-            const existingSrvRecord = await findDnsRecord(fullDomain, 'SRV');
+            
 
             await this.deleteSubdomain(fullDomain);
             const updatedARecord = (await this.createSubdomain(newFullDomain, targetIp))?.aRecord;
-            const updatedSrvRecord = await updateSrvRecord(existingSrvRecord, newFullDomain);
+            // cloudflare will automatically update the SRV record if the A record is updated
+            // const updatedSrvRecord = await updateSrvRecord(existingSrvRecord, newFullDomain);
+
+            const updatedSrvRecord = await findDnsRecord(newFullDomain, 'SRV');
 
             if (!isMcSubdomain) {
                 return { aRecord: updatedARecord, srvRecord: null };
