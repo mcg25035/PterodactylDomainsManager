@@ -178,7 +178,7 @@ module.exports = {
      * @param {string} targetIp - The target IP address (ignored if domain starts with 'mc')
      * @returns {Promise<Object>} - The created DNS record(s)
      */
-    createSubdomain: async (fullDomain, targetIp) => {
+    createSubdomain: async function (fullDomain, targetIp) {
         try {
             const isMcSubdomain = fullDomain.startsWith('mc');
 
@@ -225,7 +225,7 @@ module.exports = {
      * @param {string} targetIp - The new target IP address (ignored if domain starts with 'mc')
      * @returns {Promise<Object>} - The updated DNS record(s)
      */
-    updateSubdomain: async (fullDomain, newFullDomain, targetIp) => {
+    updateSubdomain: async function (fullDomain, newFullDomain, targetIp) {
         try {
             const isMcSubdomain = fullDomain.startsWith('mc');
 
@@ -249,7 +249,7 @@ module.exports = {
      * @param {string} fullDomain - The full domain name to delete (e.g., mc0001.mcstw.top)
      * @returns {Promise<void>}
      */
-    deleteSubdomain: async (fullDomain) => {
+    deleteSubdomain: async function (fullDomain) {
         try {
             const isMcSubdomain = fullDomain.startsWith('mc');
 
