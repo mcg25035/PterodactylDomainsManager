@@ -121,28 +121,6 @@ const updateDomain = async (id, updatedData) => {
             targetPort,
         };
 
-        // If thirdLevelDomain has changed, consider updating DNS records accordingly
-        if (updatedData.thirdLevelDomain && updatedData.thirdLevelDomain !== domain.thirdLevelDomain) {
-            // Optionally, handle renaming DNS records if supported
-            // Note: Cloudflare API does not support renaming DNS records directly
-            // You would need to create a new record and delete the old one
-            // This requires additional logic
-
-            // Example Implementation:
-            // 1. Create a new A record with the new third-level domain
-            // 2. If the old subdomain was 'mc'-prefixed, create/update the SRV record
-            // 3. Delete the old A record and SRV record
-
-            // Step 1: Create new A record
-            const newFullDomainForNewRecord = newFullDomain;
-            const newCreatedRecords = await upstreamApi.createSubdomain(newFullDomainForNewRecord, targetIp);
-
-            // Step 2: (Handled automatically in upstreamApi.createSubdomain)
-
-            // Step 3: Delete old A record and SRV record
-            await upstreamApi.deleteSubdomain(originalFullDomain);
-        }
-
         // Write updated data
         writeData(data);
 
