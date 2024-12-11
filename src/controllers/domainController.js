@@ -137,6 +137,7 @@ const updateDomain = async (req, res) => {
     }
 
     try {
+        console.log('req.body:', req.body);
         const updatedDomain = await domainService.updateDomain(id, req.body);
         if (!updatedDomain) {
             return res.status(404).json({ message: 'Domain not found' });
