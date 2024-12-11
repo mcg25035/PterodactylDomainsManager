@@ -105,7 +105,7 @@ const updateDomain = async (id, updatedData) => {
 
     try {
         // Call upstream API to update subdomain
-        const updatedRecords = await upstreamApi.updateSubdomain(originalFullDomain, targetIp);
+        const updatedRecords = await upstreamApi.updateSubdomain(originalFullDomain, newFullDomain, targetIp);
 
         // Update Cloudflare record IDs if they exist
         domain.cloudflareARecordId = updatedRecords.aRecord ? updatedRecords.aRecord.id : domain.cloudflareARecordId;
