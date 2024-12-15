@@ -1,6 +1,6 @@
 // src/services/domainService.js
 const { v4: uuidv4 } = require('uuid');
-const { readData, writeData } = require('../utils/fileHandler');
+const db = require('../utils/db');
 const upstreamApi = require('../utils/upstreamApi');
 require('dotenv').config();
 
@@ -10,164 +10,154 @@ if (!secondLevelDomain) {
     throw new Error('SECOND_LEVEL_DOMAIN is not defined in the environment variables.');
 };
 
-/**
- * Get all domains
- * @returns {Array} - List of all domains
- */
-const getAllDomains = () => {
-    const data = readData();
-    return data.domains;
-};
+function getAllDomains() {
+    return new Promise((resolve, reject) => {
+        db.all('SELECT * FROM domains', (err, rows) => {
+            if (err) return reject(err);
+            resolve(rows);
+        });
+    });
+}
 
-/**
- * Get domains by server ID
- * @param {string} serverId - The server ID
- * @returns {Array} - List of domains for the server
- */
-const getDomainsByServerId = (serverId) => {
-    const data = readData();
-    return data.domains.filter(domain => domain.serverId === serverId);
-};
+function getDomainsByServerId(serverId) {
+    return new Promise((resolve, reject) => {
+        db.all('SELECT * FROM domains WHERE serverId = ?', [serverId], (err, rows) => {
+            if (err) return reject(err);
+            resolve(rows);
+        });
+    });
+}
 
-/**
- * Get domain by ID
- * @param {string} id - The domain ID
- * @returns {Object|null} - The domain object or null if not found
- */
-const getDomainById = (id) => {
-    const data = readData();
-    return data.domains.find(domain => domain.id === id) || null;
-};
+function getDomainById(id) {
+    return new Promise((resolve, reject) => {
+        db.get('SELECT * FROM domains WHERE id = ?', [id], (err, row) => {
+            if (err) return reject(err);
+            if (!row) return resolve(null);
+            resolve(row);
+        });
+    });
+}
 
-/**
- * Create a new domain
- * @param {Object} domainData - The domain data
- * @param {string} domainData.serverId - The server ID
- * @param {string} domainData.thirdLevelDomain - The third-level domain (e.g., mc0001)
- * @returns {Promise<Object>} - The created domain object
- */
-const createDomain = async (domainData) => {
-    const data = readData();
+function getDomainsByThirdLevelDomain(thirdLevelDomain) {
+    return new Promise((resolve, reject) => {
+        db.all('SELECT * FROM domains WHERE thirdLevelDomain = ?', [thirdLevelDomain], (err, rows) => {
+            if (err) return reject(err);
+            resolve(rows);
+        });
+    });
+}
 
-    // Construct full domain name
+async function createDomain(domainData) {
     const fullDomain = `${domainData.thirdLevelDomain}.${secondLevelDomain}`;
 
-    // Create new domain object
-    const newDomain = {
-        id: uuidv4(),
-        serverId: domainData.serverId,
-        thirdLevelDomain: domainData.thirdLevelDomain,
-        targetIp: domainData.targetIp,
-        targetPort: domainData.targetPort,
-        otherData: domainData.otherData || {}
-    };
-
+    const id = uuidv4();
+    let createdRecords;
     try {
-        // Call upstream API to create subdomain
-        const createdRecords = await upstreamApi.createSubdomain(fullDomain, newDomain.targetIp);
-
-        // Optionally, store the record details if needed
-        newDomain.cloudflareARecordId = createdRecords.aRecord ? createdRecords.aRecord.id : null;
-        newDomain.cloudflareSrvRecordId = createdRecords.srvRecord ? createdRecords.srvRecord.id : null;
-
-        // Add the new domain to data
-        data.domains.push(newDomain);
-
-        // Write updated data
-        writeData(data);
-
-        return newDomain;
+        createdRecords = await upstreamApi.createSubdomain(fullDomain, domainData.targetIp);
     } catch (error) {
         throw new Error(`Error creating domain: ${error.message}`);
     }
-};
 
-/**
- * Update an existing domain
- * @param {string} id - The domain ID
- * @param {Object} updatedData - The updated data
- * @param {string} [updatedData.thirdLevelDomain] - The updated third-level domain
- * @param {string} [updatedData.targetIp] - The updated target IP
- * @param {number} [updatedData.targetPort] - The updated target port
- * @returns {Promise<Object|null>} - The updated domain object or null if not found
- */
-const updateDomain = async (id, updatedData) => {
-    const data = readData();
-    const index = data.domains.findIndex(domain => domain.id === id);
-    if (index === -1) return null;
+    return new Promise((resolve, reject) => {
+        db.run(
+            `INSERT INTO domains (id, serverId, thirdLevelDomain, targetIp, targetPort, cloudflareARecordId, cloudflareSrvRecordId, otherData)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+                id,
+                domainData.serverId,
+                domainData.thirdLevelDomain,
+                domainData.targetIp,
+                domainData.targetPort,
+                createdRecords.aRecord ? createdRecords.aRecord.id : null,
+                createdRecords.srvRecord ? createdRecords.srvRecord.id : null,
+                JSON.stringify(domainData.otherData || {})
+            ],
+            (err) => {
+                if (err) return reject(err);
+                resolve({
+                    id,
+                    serverId: domainData.serverId,
+                    thirdLevelDomain: domainData.thirdLevelDomain,
+                    targetIp: domainData.targetIp,
+                    targetPort: domainData.targetPort,
+                    otherData: domainData.otherData || {},
+                    cloudflareARecordId: createdRecords.aRecord ? createdRecords.aRecord.id : null,
+                    cloudflareSrvRecordId: createdRecords.srvRecord ? createdRecords.srvRecord.id : null
+                });
+            }
+        );
+    });
+}
 
-    const domain = data.domains[index];
+async function updateDomain(id, updatedData) {
+    const domain = await getDomainById(id);
+    if (!domain) return null;
+
     const originalFullDomain = `${domain.thirdLevelDomain}.${secondLevelDomain}`;
     const newThirdLevelDomain = updatedData.thirdLevelDomain || domain.thirdLevelDomain;
-    console.log("newThirdLevelDomain", updatedData);
-    console.log("newThirdLevelDomain", newThirdLevelDomain);
     const newFullDomain = `${newThirdLevelDomain}.${secondLevelDomain}`;
     const targetIp = updatedData.targetIp || domain.targetIp;
     const targetPort = updatedData.targetPort || domain.targetPort;
+    const otherData = updatedData.otherData ? JSON.stringify(updatedData.otherData) : domain.otherData;
 
+    let updatedRecords;
     try {
-        // Call upstream API to update subdomain
-        const updatedRecords = await upstreamApi.updateSubdomain(originalFullDomain, newFullDomain, targetIp);
-
-        // Update Cloudflare record IDs if they exist
-        domain.cloudflareARecordId = updatedRecords.aRecord ? updatedRecords.aRecord.id : domain.cloudflareARecordId;
-        domain.cloudflareSrvRecordId = updatedRecords.srvRecord ? updatedRecords.srvRecord.id : domain.cloudflareSrvRecordId;
-
-        // Update domain data
-        data.domains[index] = {
-            ...domain,
-            ...updatedData,
-            targetIp,
-            targetPort,
-        };
-
-        // Write updated data
-        writeData(data);
-
-        console.log("data.domains[index]", data.domains[index]);
-
-        return data.domains[index];
+        updatedRecords = await upstreamApi.updateSubdomain(originalFullDomain, newFullDomain, targetIp);
     } catch (error) {
         throw new Error(`Error updating domain: ${error.message}`);
     }
-};
 
-/**
- * Delete a domain
- * @param {string} id - The domain ID
- * @returns {Promise<boolean>} - True if deleted, false if not found
- */
-const deleteDomain = async (id) => {
-    const data = readData();
-    const index = data.domains.findIndex(domain => domain.id === id);
-    if (index === -1) return false;
+    return new Promise((resolve, reject) => {
+        db.run(
+            `UPDATE domains 
+             SET thirdLevelDomain = ?, targetIp = ?, targetPort = ?, cloudflareARecordId = ?, cloudflareSrvRecordId = ?, otherData = ?
+             WHERE id = ?`,
+            [
+                newThirdLevelDomain,
+                targetIp,
+                targetPort,
+                updatedRecords.aRecord ? updatedRecords.aRecord.id : domain.cloudflareARecordId,
+                updatedRecords.srvRecord ? updatedRecords.srvRecord.id : domain.cloudflareSrvRecordId,
+                otherData,
+                id
+            ],
+            function (err) {
+                if (err) return reject(err);
 
-    const removedDomain = data.domains.splice(index, 1)[0];
-    const fullDomain = `${removedDomain.thirdLevelDomain}.${secondLevelDomain}`; 
+                resolve({
+                    id,
+                    serverId: domain.serverId,
+                    thirdLevelDomain: newThirdLevelDomain,
+                    targetIp,
+                    targetPort,
+                    otherData: otherData ? JSON.parse(otherData) : {},
+                    cloudflareARecordId: updatedRecords.aRecord ? updatedRecords.aRecord.id : domain.cloudflareARecordId,
+                    cloudflareSrvRecordId: updatedRecords.srvRecord ? updatedRecords.srvRecord.id : domain.cloudflareSrvRecordId
+                });
+            }
+        );
+    });
+}
+
+async function deleteDomain(id) {
+    const domain = await getDomainById(id);
+    if (!domain) return false;
+
+    const fullDomain = `${domain.thirdLevelDomain}.${secondLevelDomain}`;
 
     try {
-        // 呼叫上游 API 刪除子域名
         await upstreamApi.deleteSubdomain(fullDomain);
-
-        // 寫入更新後的數據
-        writeData(data);
-
-        return true;
     } catch (error) {
         throw new Error(`Error deleting domain: ${error.message}`);
     }
-};
 
-/**
- * Get domains by third level domain
- * @param {string} thirdLevelDomain - The third level domain (e.g. "mc0001")
- * @returns {Array} - List of domains matching the specified third level domain
- */
-const getDomainsByThirdLevelDomain = (thirdLevelDomain) => {
-    const data = readData();
-    return data.domains.filter(domain => domain.thirdLevelDomain === thirdLevelDomain);
-};
-
+    return new Promise((resolve, reject) => {
+        db.run('DELETE FROM domains WHERE id = ?', [id], function(err) {
+            if (err) return reject(err);
+            resolve(true);
+        });
+    });
+}
 
 module.exports = {
     getAllDomains,
