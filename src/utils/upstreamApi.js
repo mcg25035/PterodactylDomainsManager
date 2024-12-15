@@ -1,170 +1,149 @@
-// src/services/domainService.js
-const { v4: uuidv4 } = require('uuid');
-const db = require('../utils/db');
-const upstreamApi = require('../utils/upstreamApi');
-require('dotenv').config();
+// src/utils/upstreamApi.js
+const axios = require('axios');
+const dotenv = require('dotenv');
 
-const secondLevelDomain = process.env.SECOND_LEVEL_DOMAIN;
+dotenv.config();
 
-if (!secondLevelDomain) {
-    throw new Error('SECOND_LEVEL_DOMAIN is not defined in the environment variables.');
+const { CLOUDFLARE_API_TOKEN, CLOUDFLARE_ZONE_ID, FIXED_IP, FIXED_PORT, SECOND_LEVEL_DOMAIN } = process.env;
+
+if (!CLOUDFLARE_API_TOKEN || !CLOUDFLARE_ZONE_ID || !FIXED_IP || !FIXED_PORT || !SECOND_LEVEL_DOMAIN) {
+    throw new Error('Missing required environment variables.');
+}
+
+const ZONE_NAME = SECOND_LEVEL_DOMAIN;
+
+const cloudflareApi = axios.create({
+    baseURL: 'https://api.cloudflare.com/client/v4',
+    headers: {
+        Authorization: `Bearer ${CLOUDFLARE_API_TOKEN}`,
+        'Content-Type': 'application/json',
+    },
+});
+
+const getRecordName = (fullDomain) => {
+    if (fullDomain.endsWith(`.${ZONE_NAME}`)) {
+        return fullDomain.slice(0, -ZONE_NAME.length - 1);
+    }
+    return fullDomain; 
 };
 
-function getAllDomains() {
-    return new Promise((resolve, reject) => {
-        db.all('SELECT * FROM domains', (err, rows) => {
-            if (err) return reject(err);
-            resolve(rows);
-        });
-    });
-}
-
-function getDomainsByServerId(serverId) {
-    return new Promise((resolve, reject) => {
-        db.all('SELECT * FROM domains WHERE serverId = ?', [serverId], (err, rows) => {
-            if (err) return reject(err);
-            resolve(rows);
-        });
-    });
-}
-
-function getDomainById(id) {
-    return new Promise((resolve, reject) => {
-        db.get('SELECT * FROM domains WHERE id = ?', [id], (err, row) => {
-            if (err) return reject(err);
-            if (!row) return resolve(null);
-            resolve(row);
-        });
-    });
-}
-
-function getDomainsByThirdLevelDomain(thirdLevelDomain) {
-    return new Promise((resolve, reject) => {
-        db.all('SELECT * FROM domains WHERE thirdLevelDomain = ?', [thirdLevelDomain], (err, rows) => {
-            if (err) return reject(err);
-            resolve(rows);
-        });
-    });
-}
-
-async function createDomain(domainData) {
-    const fullDomain = `${domainData.thirdLevelDomain}.${secondLevelDomain}`;
-
-    const id = uuidv4();
-    let createdRecords;
-    try {
-        createdRecords = await upstreamApi.createSubdomain(fullDomain, domainData.targetIp);
-    } catch (error) {
-        throw new Error(`Error creating domain: ${error.message}`);
-    }
-
-    return new Promise((resolve, reject) => {
-        db.run(
-            `INSERT INTO domains (id, serverId, thirdLevelDomain, targetIp, targetPort, cloudflareARecordId, cloudflareSrvRecordId, otherData)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-            [
-                id,
-                domainData.serverId,
-                domainData.thirdLevelDomain,
-                domainData.targetIp,
-                domainData.targetPort,
-                createdRecords.aRecord ? createdRecords.aRecord.id : null,
-                createdRecords.srvRecord ? createdRecords.srvRecord.id : null,
-                JSON.stringify(domainData.otherData || {})
-            ],
-            (err) => {
-                if (err) return reject(err);
-                resolve({
-                    id,
-                    serverId: domainData.serverId,
-                    thirdLevelDomain: domainData.thirdLevelDomain,
-                    targetIp: domainData.targetIp,
-                    targetPort: domainData.targetPort,
-                    otherData: domainData.otherData || {},
-                    cloudflareARecordId: createdRecords.aRecord ? createdRecords.aRecord.id : null,
-                    cloudflareSrvRecordId: createdRecords.srvRecord ? createdRecords.srvRecord.id : null
-                });
-            }
-        );
-    });
-}
-
-async function updateDomain(id, updatedData) {
-    const domain = await getDomainById(id);
-    if (!domain) return null;
-
-    const originalFullDomain = `${domain.thirdLevelDomain}.${secondLevelDomain}`;
-    const newThirdLevelDomain = updatedData.thirdLevelDomain || domain.thirdLevelDomain;
-    const newFullDomain = `${newThirdLevelDomain}.${secondLevelDomain}`;
-    const targetIp = updatedData.targetIp || domain.targetIp;
-    const targetPort = updatedData.targetPort || domain.targetPort;
-    const otherData = updatedData.otherData ? JSON.stringify(updatedData.otherData) : domain.otherData;
-
-    let updatedRecords;
-    try {
-        updatedRecords = await upstreamApi.updateSubdomain(originalFullDomain, newFullDomain, targetIp);
-    } catch (error) {
-        throw new Error(`Error updating domain: ${error.message}`);
-    }
-
-    return new Promise((resolve, reject) => {
-        db.run(
-            `UPDATE domains 
-             SET thirdLevelDomain = ?, targetIp = ?, targetPort = ?, cloudflareARecordId = ?, cloudflareSrvRecordId = ?, otherData = ?
-             WHERE id = ?`,
-            [
-                newThirdLevelDomain,
-                targetIp,
-                targetPort,
-                updatedRecords.aRecord ? updatedRecords.aRecord.id : domain.cloudflareARecordId,
-                updatedRecords.srvRecord ? updatedRecords.srvRecord.id : domain.cloudflareSrvRecordId,
-                otherData,
-                id
-            ],
-            function (err) {
-                if (err) return reject(err);
-
-                resolve({
-                    id,
-                    serverId: domain.serverId,
-                    thirdLevelDomain: newThirdLevelDomain,
-                    targetIp,
-                    targetPort,
-                    otherData: otherData ? JSON.parse(otherData) : {},
-                    cloudflareARecordId: updatedRecords.aRecord ? updatedRecords.aRecord.id : domain.cloudflareARecordId,
-                    cloudflareSrvRecordId: updatedRecords.srvRecord ? updatedRecords.srvRecord.id : domain.cloudflareSrvRecordId
-                });
-            }
-        );
-    });
-}
-
-async function deleteDomain(id) {
-    const domain = await getDomainById(id);
-    if (!domain) return false;
-
-    const fullDomain = `${domain.thirdLevelDomain}.${secondLevelDomain}`;
+const createSrvRecord = async (recordName) => {
+    const srvName = `_minecraft._tcp.${recordName}`;
+    const srvTarget = `${recordName}.${ZONE_NAME}`;
+    const srvData = {
+        service: "_minecraft",
+        proto: "_tcp",
+        name: recordName,
+        priority: 0,
+        weight: 5,
+        port: parseInt(FIXED_PORT, 10),
+        target: `${srvTarget}.`
+    };
 
     try {
-        await upstreamApi.deleteSubdomain(fullDomain);
-    } catch (error) {
-        throw new Error(`Error deleting domain: ${error.message}`);
-    }
-
-    return new Promise((resolve, reject) => {
-        db.run('DELETE FROM domains WHERE id = ?', [id], function(err) {
-            if (err) return reject(err);
-            resolve(true);
+        const response = await cloudflareApi.post(`/zones/${CLOUDFLARE_ZONE_ID}/dns_records`, {
+            type: 'SRV',
+            name: srvName,
+            data: srvData,
+            ttl: 1,
+            proxied: false,
         });
-    });
-}
+
+        if (!response.data.success) {
+            throw new Error(response.data.errors.map((e) => e.message).join(', '));
+        }
+        return response.data.result;
+    } catch (error) {
+        const errMsg = error.response 
+            ? error.response.data.errors.map((e) => e.message).join(', ') 
+            : error.message;
+        throw new Error(`Failed to create SRV record: ${errMsg}`);
+    }
+};
+
+const deleteSrvRecord = async (existingRecord) => {
+    const response = await cloudflareApi.delete(`/zones/${CLOUDFLARE_ZONE_ID}/dns_records/${existingRecord.id}`);
+
+    if (!response.data.success) {
+        throw new Error(response.data.errors.map((e) => e.message).join(', '));
+    }
+};
+
+const fetchDnsRecords = async () => {
+    const response = await cloudflareApi.get(`/zones/${CLOUDFLARE_ZONE_ID}/dns_records?per_page=1000`);
+    if (!response.data.success) {
+        throw new Error(response.data.errors.map((e) => e.message).join(', '));
+    }
+    return response.data.result;
+};
+
+const findDnsRecord = async (fullDomain, type = 'A') => {
+    const records = await fetchDnsRecords();
+    return records.find((record) => {
+        if (type !== record.type) return false;
+        if (type === 'SRV') return record?.data?.target === `${fullDomain}.`;
+        return record.name === fullDomain;
+    }) || null;
+};
 
 module.exports = {
-    getAllDomains,
-    getDomainsByServerId,
-    getDomainById,
-    getDomainsByThirdLevelDomain,
-    createDomain,
-    updateDomain,
-    deleteDomain,
+    fetchAllDnsRecords: fetchDnsRecords,
+
+    createSubdomain: async function (fullDomain, targetIp) {
+        const isMcSubdomain = fullDomain.startsWith('mc');
+
+        const existingARecord = await findDnsRecord(fullDomain, 'A');
+        if (existingARecord) throw new Error(`Subdomain ${fullDomain} already exists.`);
+
+        const recordName = getRecordName(fullDomain);
+        const ipToUse = isMcSubdomain ? FIXED_IP : targetIp;
+
+        const aRecordResponse = await cloudflareApi.post(`/zones/${CLOUDFLARE_ZONE_ID}/dns_records`, {
+            type: 'A',
+            name: recordName,
+            content: ipToUse,
+            ttl: 1,
+            proxied: false,
+        });
+
+        if (!aRecordResponse.data.success) {
+            throw new Error(aRecordResponse.data.errors.map((e) => e.message).join(', '));
+        }
+
+        const createdARecord = aRecordResponse.data.result;
+
+        if (!isMcSubdomain) return { aRecord: createdARecord, srvRecord: null };
+
+        const createdSrvRecord = await createSrvRecord(recordName);
+        return { aRecord: createdARecord, srvRecord: createdSrvRecord };
+    },
+
+    updateSubdomain: async function (fullDomain, newFullDomain, targetIp) {
+        const isMcSubdomain = fullDomain.startsWith('mc');
+
+        await this.deleteSubdomain(fullDomain);
+        const updatedARecord = (await this.createSubdomain(newFullDomain, targetIp))?.aRecord;
+        const updatedSrvRecord = await findDnsRecord(newFullDomain, 'SRV');
+
+        if (!isMcSubdomain) return { aRecord: updatedARecord, srvRecord: null };
+
+        return { aRecord: updatedARecord, srvRecord: updatedSrvRecord };
+    },
+
+    deleteSubdomain: async function (fullDomain) {
+        const isMcSubdomain = fullDomain.startsWith('mc');
+
+        const existingARecord = await findDnsRecord(fullDomain, 'A');
+        if (!existingARecord) throw new Error(`Subdomain ${fullDomain} does not exist.`);
+
+        const aRecordResponse = await cloudflareApi.delete(`/zones/${CLOUDFLARE_ZONE_ID}/dns_records/${existingARecord.id}`);
+        if (!aRecordResponse.data.success) {
+            throw new Error(aRecordResponse.data.errors.map((e) => e.message).join(', '));
+        }
+
+        if (!isMcSubdomain) return;
+
+        const existingSrvRecord = await findDnsRecord(fullDomain, 'SRV');
+        if (existingSrvRecord) await deleteSrvRecord(existingSrvRecord);
+    }
 };
