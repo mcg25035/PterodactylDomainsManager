@@ -4,6 +4,7 @@ require('dotenv').config(); // Load environment variables
 const express = require('express');
 const bodyParser = require('body-parser');
 const domainRoutes = require('./routes/domainRoutes');
+const connectionLogRoutes = require('./routes/connectionLogRoutes');
 const apiKeyMiddleware = require('./middleware/apiKeyMiddleware'); // Import middleware
 const errorHandler = require('./middleware/errorHandler');
 
