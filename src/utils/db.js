@@ -23,7 +23,8 @@ db.serialize(() => {
     db.run(`
         CREATE TABLE IF NOT EXISTS connectionLogs (
             id TEXT PRIMARY KEY,
-            domainId TEXT NOT NULL,
+            serverId TEXT NOT NULL,
+            fullDomain TEXT NOT NULL,
             playerName TEXT NOT NULL,
             playerIp TEXT NOT NULL,
             connectedAt TEXT NOT NULL DEFAULT (datetime('now','localtime'))
