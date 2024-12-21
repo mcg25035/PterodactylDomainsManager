@@ -18,6 +18,8 @@ app.use(errorHandler);
 // Routes
 app.use('/api', domainRoutes);
 
+app.use('/api', connectionLogRoutes);
+
 // Root route
 app.get('/', (req, res) => {
     res.send('PterodactylDomainsManager API is running');

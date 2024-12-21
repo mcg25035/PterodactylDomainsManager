@@ -19,6 +19,16 @@ db.serialize(() => {
             otherData TEXT
         )
     `);
+
+    db.run(`
+        CREATE TABLE IF NOT EXISTS connectionLogs (
+            id TEXT PRIMARY KEY,
+            domainId TEXT NOT NULL,
+            playerName TEXT NOT NULL,
+            playerIp TEXT NOT NULL,
+            connectedAt TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+        )
+    `);
 });
 
 module.exports = db;
