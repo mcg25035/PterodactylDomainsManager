@@ -4,12 +4,13 @@ const router = express.Router();
 const connectionLogController = require('../controllers/connectionLogController');
 const { body, param } = require('express-validator');
 
-router.get('/connection-logs', connectionLogController.getConnectionLogByServerId);
+// 查全部連線紀錄
+router.get('/connection-logs', connectionLogController.getAllConnectionLogs);
 
 // 查單筆連線紀錄
 router.get('/connection-logs/:id', [
     param('id').isUUID().withMessage('Invalid connection log id format'),
-], connectionLogController.getConnectionLogById);
+], connectionLogController.getConnectionLogByServerId);
 
 // 新增連線紀錄
 router.post('/connection-logs', [
