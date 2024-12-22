@@ -26,6 +26,18 @@ async function getConnectionLogById(req, res) {
     }
 }
 
+async function getConnectionLogByServerId(req, res) {
+    try {
+        const { serverId } = req.params;
+        const logs = await connectionLogService.getConnectionLogByServerId(serverId);
+        return res.json(logs);
+    } catch (error) {
+        console.error(`Error fetching connection logs by server ID (${req.params.serverId}): ${error.message}`);
+        return res.status(500).json({ message: 'Internal Server Error' });
+    }
+    
+}
+
 async function createConnectionLog(req, res) {
     // 驗證參數
     const errors = validationResult(req);

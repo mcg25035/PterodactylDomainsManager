@@ -40,6 +40,15 @@ function getConnectionLogById(id) {
     });
 }
 
+function getConnectionLogByServerId(serverId) {
+    return new Promise((resolve, reject) => {
+        db.all('SELECT * FROM connectionLogs WHERE serverId = ?', [serverId], (err, rows) => {
+            if (err) return reject(err);
+            resolve(rows);
+        });
+    });
+}
+
 /**
  * 建立一筆連線紀錄：依 fullDomain -> 找出對應 serverId，再寫入 connectionLogs
  */
@@ -128,5 +137,6 @@ module.exports = {
     getConnectionLogs,
     getConnectionLogById,
     createConnectionLog,
-    deleteConnectionLog
+    deleteConnectionLog,
+    getConnectionLogByServerId
 };
