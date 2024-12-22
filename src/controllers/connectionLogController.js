@@ -86,5 +86,6 @@ module.exports = {
     getAllConnectionLogs,
     getConnectionLogById,
     createConnectionLog,
-    deleteConnectionLog
+    deleteConnectionLog,
+    getConnectionLogByServerId
 };
