@@ -8,8 +8,8 @@ const { body, param } = require('express-validator');
 router.get('/connection-logs', connectionLogController.getAllConnectionLogs);
 
 // 查單筆連線紀錄
-router.get('/connection-logs/:id', [
-    param('id').isUUID().withMessage('Invalid connection log id format'),
+router.get('/connection-logs/:serverId', [
+    param('serverId').isUUID().withMessage('Invalid connection log id format'),
 ], connectionLogController.getConnectionLogByServerId);
 
 // 新增連線紀錄
