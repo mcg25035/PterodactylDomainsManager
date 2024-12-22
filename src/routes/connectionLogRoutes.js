@@ -4,8 +4,7 @@ const router = express.Router();
 const connectionLogController = require('../controllers/connectionLogController');
 const { body, param } = require('express-validator');
 
-// 查全部連線紀錄
-router.get('/connection-logs', connectionLogController.getAllConnectionLogs);
+router.get('/connection-logs', connectionLogController.getConnectionLogByServerId);
 
 // 查單筆連線紀錄
 router.get('/connection-logs/:id', [
