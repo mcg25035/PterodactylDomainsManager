@@ -29,9 +29,7 @@ async function getConnectionLogById(req, res) {
 async function getConnectionLogByServerId(req, res) {
     try {
         const { serverId } = req.params;
-        console.log(serverId);
         const logs = await connectionLogService.getConnectionLogByServerId(serverId);
-        console.log(logs);
         return res.json(logs);
     } catch (error) {
         console.error(`Error fetching connection logs by server ID (${req.params.serverId}): ${error.message}`);
