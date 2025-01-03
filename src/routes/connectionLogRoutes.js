@@ -3,9 +3,18 @@ const express = require('express');
 const router = express.Router();
 const connectionLogController = require('../controllers/connectionLogController');
 const { body, param } = require('express-validator');
+const { query } = require('express-validator');
 
-// 查全部連線紀錄
-router.get('/connection-logs', connectionLogController.getAllConnectionLogs);
+// 查全部連線紀錄（增加查詢參數的驗證）
+router.get('/connection-logs', [
+  query('page').optional().isInt({ gt: 0 }),
+  query('pageSize').optional().isInt({ gt: 0, lt: 51 }), // 僅允許 1~50
+  query('ip').optional().isIP(),
+  query('username').optional().isString(),
+  query('fromTime').optional().isString(),
+  query('toTime').optional().isString()
+], connectionLogController.getAllConnectionLogs);
+
 
 // 查單筆連線紀錄
 router.get('/connection-logs/:serverId', [

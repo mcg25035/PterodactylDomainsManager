@@ -21,11 +21,96 @@ function findDomainByFullDomain(fullDomain) {
     });
 }
 
-function getConnectionLogs() {
+/**
+ * 取 Connection Logs，支援：
+ * - 分頁 (page, pageSize，預設 pageSize <= 50)
+ * - 搜尋條件：playerIp, playerName (like), 時間區間 connectedAt
+ */
+function getConnectionLogs({ 
+    page = 1, 
+    pageSize = 50,
+    ip,        // 完整比對：playerIp = ?
+    username,  // 模糊比對：playerName LIKE ?
+    fromTime,  // connectedAt >= fromTime
+    toTime     // connectedAt <= toTime
+} = {}) {
     return new Promise((resolve, reject) => {
-        db.all('SELECT * FROM connectionLogs', (err, rows) => {
-            if (err) return reject(err);
-            resolve(rows);
+        // 先組裝基本 SQL
+        // 注意：若資料量大，可能需要再做索引 (INDEX)
+        let baseQuery = `SELECT * FROM connectionLogs WHERE 1=1`;
+        let countQuery = `SELECT COUNT(*) as count FROM connectionLogs WHERE 1=1`;
+
+        const params = [];
+        const countParams = [];
+
+        // 若有指定 ip
+        if (ip) {
+            baseQuery += ` AND playerIp = ?`;
+            countQuery += ` AND playerIp = ?`;
+            params.push(ip);
+            countParams.push(ip);
+        }
+
+        // 若有指定玩家名稱 (使用部分比對)
+        if (username) {
+            baseQuery += ` AND playerName LIKE ?`;
+            countQuery += ` AND playerName LIKE ?`;
+            params.push(`%${username}%`);
+            countParams.push(`%${username}%`);
+        }
+
+        // 若有時間區間 (fromTime ~ toTime)
+        if (fromTime) {
+            baseQuery += ` AND connectedAt >= ?`;
+            countQuery += ` AND connectedAt >= ?`;
+            params.push(fromTime);
+            countParams.push(fromTime);
+        }
+
+        if (toTime) {
+            baseQuery += ` AND connectedAt <= ?`;
+            countQuery += ` AND connectedAt <= ?`;
+            params.push(toTime);
+            countParams.push(toTime);
+        }
+
+        // 先做 countQuery 查總筆數
+        db.get(countQuery, countParams, (err, row) => {
+            if (err) {
+                return reject(err);
+            }
+
+            // 總筆數
+            const total = row ? row.count : 0;
+
+            // 處理 pageSize 上限
+            if (pageSize > 50) {
+                pageSize = 50;
+            }
+
+            // 分頁計算 offset
+            const offset = (page - 1) * pageSize;
+
+            // 在 main query 加入排序、分頁
+            baseQuery += ` ORDER BY connectedAt DESC LIMIT ? OFFSET ?`;
+            // 把 limit 與 offset 參數推進去
+            params.push(pageSize, offset);
+
+            // 查詢結果資料
+            db.all(baseQuery, params, (err2, rows) => {
+                if (err2) {
+                    return reject(err2);
+                }
+
+                // 回傳結構：包含 data、總筆數、目前頁數、每頁限制、總頁數
+                resolve({
+                    data: rows,
+                    total,
+                    page,
+                    pageSize,
+                    totalPages: Math.ceil(total / pageSize)
+                });
+            });
         });
     });
 }
