@@ -3,9 +3,37 @@ const connectionLogService = require('../services/connectionLogService');
 const { validationResult } = require('express-validator');
 
 async function getAllConnectionLogs(req, res) {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+    }
+
     try {
-        const logs = await connectionLogService.getConnectionLogs();
-        return res.json(logs);
+        let {
+            page = 1,
+            pageSize = 50,
+            ip,       // playerIp
+            username, // playerName
+            fromTime, // connectedAt >= fromTime
+            toTime,    // connectedAt <= toTime
+            server
+        } = req.query;
+
+        page = parseInt(page, 10);
+        pageSize = parseInt(pageSize, 10);
+
+        const result = await connectionLogService.getConnectionLogs({
+            page,
+            pageSize,
+            ip,
+            username,
+            fromTime,
+            toTime,
+            server
+        });
+
+
+        return res.json(result);
     } catch (error) {
         console.error(`Error fetching connection logs: ${error.message}`);
         return res.status(500).json({ message: 'Internal Server Error' });

@@ -32,7 +32,8 @@ function getConnectionLogs({
     ip,        // 完整比對：playerIp = ?
     username,  // 模糊比對：playerName LIKE ?
     fromTime,  // connectedAt >= fromTime
-    toTime     // connectedAt <= toTime
+    toTime,     // connectedAt <= toTime
+    server  // serverId
 } = {}) {
     return new Promise((resolve, reject) => {
         // 先組裝基本 SQL
@@ -72,6 +73,13 @@ function getConnectionLogs({
             countQuery += ` AND connectedAt <= ?`;
             params.push(toTime);
             countParams.push(toTime);
+        }
+
+        if (server) {
+            baseQuery += ` AND serverId = ?`;
+            countQuery += ` AND serverId = ?`;
+            params.push(server);
+            countParams.push(server);
         }
 
         // 先做 countQuery 查總筆數

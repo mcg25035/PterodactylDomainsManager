@@ -12,14 +12,15 @@ router.get('/connection-logs', [
   query('ip').optional().isIP(),
   query('username').optional().isString(),
   query('fromTime').optional().isString(),
-  query('toTime').optional().isString()
+  query('toTime').optional().isString(),
+  query('server').optional().isString(),
 ], connectionLogController.getAllConnectionLogs);
 
 
-// 查單筆連線紀錄
-router.get('/connection-logs/:serverId', [
-    param('serverId').isUUID().withMessage('Invalid connection log id format'),
-], connectionLogController.getConnectionLogByServerId);
+// // 查單筆連線紀錄
+// router.get('/connection-logs/:serverId', [
+//     param('serverId').isUUID().withMessage('Invalid connection log id format'),
+// ], connectionLogController.getConnectionLogByServerId);
 
 // 新增連線紀錄
 router.post('/connection-logs', [
