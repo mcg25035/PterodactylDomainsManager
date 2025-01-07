@@ -31,6 +31,7 @@ function getConnectionLogs({
     pageSize = 50,
     ip,        // 完整比對：playerIp = ?
     username,  // 模糊比對：playerName LIKE ?
+    uuid,     // 完整比對：playerUuid = ?
     fromTime,  // connectedAt >= fromTime
     toTime,     // connectedAt <= toTime
     server  // serverId
@@ -58,6 +59,13 @@ function getConnectionLogs({
             countQuery += ` AND playerName LIKE ?`;
             params.push(`%${username}%`);
             countParams.push(`%${username}%`);
+        }
+
+        if (uuid) {
+            baseQuery += ` AND playerUuid = ?`;
+            countQuery += ` AND playerUuid = ?`;
+            params.push(uuid);
+            countParams.push(uuid);
         }
 
         // 若有時間區間 (fromTime ~ toTime)
@@ -145,7 +153,7 @@ function getConnectionLogByServerId(serverId) {
 /**
  * 建立一筆連線紀錄：依 fullDomain -> 找出對應 serverId，再寫入 connectionLogs
  */
-async function createConnectionLog({ fullDomain, playerName, playerIp }) {
+async function createConnectionLog({ fullDomain, playerName, playerIp, playerUuid }) {
     // 1. 查詢 domain，取得 serverId
     const serverId = await getServerIdByFullDomain(fullDomain);
     if (!serverId) {
@@ -155,10 +163,10 @@ async function createConnectionLog({ fullDomain, playerName, playerIp }) {
     return new Promise((resolve, reject) => {
         const id = uuidv4();
         db.run(`
-            INSERT INTO connectionLogs (id, serverId, fullDomain, playerName, playerIp)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO connectionLogs (id, serverId, fullDomain, playerName, playerIp, playerUuid)
+            VALUES (?, ?, ?, ?, ?, ?)
         `,
-        [id, serverId, fullDomain, playerName, playerIp],
+        [id, serverId, fullDomain, playerName, playerIp, playerUuid],
         function (err) {
             if (err) return reject(err);
             resolve({
@@ -167,6 +175,7 @@ async function createConnectionLog({ fullDomain, playerName, playerIp }) {
                 fullDomain,
                 playerName,
                 playerIp,
+                playerUuid,
                 connectedAt: null, // DB 預設值
             });
         });

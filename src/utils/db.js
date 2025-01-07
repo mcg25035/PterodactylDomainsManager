@@ -27,6 +27,7 @@ db.serialize(() => {
             fullDomain TEXT NOT NULL,
             playerName TEXT NOT NULL,
             playerIp TEXT NOT NULL,
+            playerUuid TEXT NOT NULL,
             connectedAt TEXT NOT NULL DEFAULT (datetime('now','localtime'))
         )
     `);
