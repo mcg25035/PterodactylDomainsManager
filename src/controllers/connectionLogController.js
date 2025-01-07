@@ -82,12 +82,13 @@ async function createConnectionLog(req, res) {
      * }
      * 不用再送 serverId
      */
-    const { fullDomain, playerName, playerIp } = req.body;
+    const { fullDomain, playerName, playerIp, playerUuid } = req.body;
     try {
         const newLog = await connectionLogService.createConnectionLog({ 
             fullDomain, 
             playerName, 
-            playerIp 
+            playerIp,
+            playerUuid
         });
         return res.status(201).json(newLog);
     } catch (error) {
