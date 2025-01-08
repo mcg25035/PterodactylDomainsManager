@@ -21,7 +21,7 @@ app.use('/api', domainRoutes);
 app.use('/api', connectionLogRoutes);
 
 const playerFirewallRoutes = require('./routes/playerFirewallRoutes');
-app.use('/api', playerFirewallRoutes);
+app.use('/api/playerfirewall', playerFirewallRoutes);
 
 // Root route
 app.get('/', (req, res) => {
