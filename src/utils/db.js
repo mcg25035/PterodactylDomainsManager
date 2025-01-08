@@ -31,6 +31,18 @@ db.serialize(() => {
             connectedAt TEXT NOT NULL DEFAULT (datetime('now','localtime'))
         )
     `);
+
+    db.run(`
+        CREATE TABLE IF NOT EXISTS playerFirewall (
+            id TEXT PRIMARY KEY,
+            serverId TEXT NOT NULL,
+            type TEXT NOT NULL,
+            value TEXT NOT NULL,
+            createdAt TEXT NOT NULL,
+            duration INTEGER,
+            expiresAt TEXT
+        )
+    `);
 });
 
 module.exports = db;

@@ -18,8 +18,10 @@ app.use(errorHandler);
 
 // Routes
 app.use('/api', domainRoutes);
-
 app.use('/api', connectionLogRoutes);
+
+const playerFirewallRoutes = require('./routes/playerFirewallRoutes');
+app.use('/api', playerFirewallRoutes);
 
 // Root route
 app.get('/', (req, res) => {
