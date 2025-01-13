@@ -1,7 +1,7 @@
 const db = require('../utils/db');
 
 const createBan = async (banData) => {
-	const { serverId, type, value, duration } = banData;
+	const { serverId, type, value, expiresAt } = banData;
 	if (!serverId || !type || !value) {
 		throw new Error('Server ID, ban type, and value are required.');
 	}
@@ -11,13 +11,12 @@ const createBan = async (banData) => {
 		serverId,
 		type,
 		value,
-		createdAt: new Date(),
-		duration: duration || null,
-		expiresAt: duration ? new Date(Date.now() + duration * 1000) : null,
+		createdAt: Date.now(),
+		expiresAt: expiresAt ? Number(expiresAt) : -1,
 	};
 
 	return new Promise((resolve, reject) => {
-		db.run('INSERT INTO playerFirewall (id, serverId, type, value, createdAt, duration, expiresAt) VALUES (?, ?, ?, ?, ?, ?, ?)', [ban.id, ban.serverId, ban.type, ban.value, ban.createdAt, ban.duration, ban.expiresAt], function (err) {
+		db.run('INSERT INTO playerFirewall (id, serverId, type, value, createdAt, expiresAt) VALUES (?, ?, ?, ?, ?, ?, ?)', [ban.id, ban.serverId, ban.type, ban.value, ban.createdAt, ban.expiresAt], function (err) {
 			if (err) return reject(err);
 			resolve(ban);
 		});

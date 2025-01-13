@@ -39,8 +39,7 @@ db.serialize(() => {
             type TEXT NOT NULL,
             value TEXT NOT NULL,
             createdAt TEXT NOT NULL,
-            duration INTEGER,
-            expiresAt TEXT
+            expiresAt INTEGER
         )
     `);
 });
