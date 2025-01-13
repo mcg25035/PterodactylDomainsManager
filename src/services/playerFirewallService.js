@@ -16,7 +16,7 @@ const createBan = async (banData) => {
 	};
 
 	return new Promise((resolve, reject) => {
-		db.run('INSERT INTO playerFirewall (id, serverId, type, value, createdAt, expiresAt) VALUES (?, ?, ?, ?, ?, ?, ?)', [ban.id, ban.serverId, ban.type, ban.value, ban.createdAt, ban.expiresAt], function (err) {
+		db.run('INSERT INTO playerFirewall (id, serverId, type, value, createdAt, expiresAt) VALUES (?, ?, ?, ?, ?, ?)', [ban.id, ban.serverId, ban.type, ban.value, ban.createdAt, ban.expiresAt], function (err) {
 			if (err) return reject(err);
 			resolve(ban);
 		});
