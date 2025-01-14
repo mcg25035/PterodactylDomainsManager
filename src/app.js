@@ -7,6 +7,7 @@ const domainRoutes = require('./routes/domainRoutes');
 const connectionLogRoutes = require('./routes/connectionLogRoutes');
 const apiKeyMiddleware = require('./middleware/apiKeyMiddleware'); // Import middleware
 const errorHandler = require('./middleware/errorHandler');
+const { cleanupExpiredBans } = require('./services/playerFirewallService');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -37,4 +38,5 @@ app.use((err, req, res, next) => {
 // Start the server
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
+	setInterval(cleanupExpiredBans, 60 * 1000);
 });

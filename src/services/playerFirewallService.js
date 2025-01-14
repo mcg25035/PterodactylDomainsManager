@@ -109,4 +109,15 @@ module.exports = {
 	readBanByServerId,
 	updateBan,
 	deleteBan,
+	cleanupExpiredBans,
+};
+
+const cleanupExpiredBans = async () => {
+	const now = Date.now();
+	return new Promise((resolve, reject) => {
+		db.run('DELETE FROM playerFirewall WHERE expiresAt != -1 AND expiresAt < ?', [now], function (err) {
+			if (err) return reject(err);
+			resolve();
+		});
+	});
 };
