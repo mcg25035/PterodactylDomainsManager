@@ -103,15 +103,6 @@ const deleteBan = async (id) => {
 	});
 };
 
-module.exports = {
-	createBan,
-	readBanByDomain,
-	readBanByServerId,
-	updateBan,
-	deleteBan,
-	cleanupExpiredBans,
-};
-
 const cleanupExpiredBans = async () => {
 	const now = Date.now();
 	return new Promise((resolve, reject) => {
@@ -120,4 +111,13 @@ const cleanupExpiredBans = async () => {
 			resolve();
 		});
 	});
+};
+
+module.exports = {
+	createBan,
+	readBanByDomain,
+	readBanByServerId,
+	updateBan,
+	deleteBan,
+	cleanupExpiredBans,
 };
