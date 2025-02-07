@@ -108,6 +108,7 @@ const updateDomain = async (req, res) => {
 
     const errors = validationResult(req);
     if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+    if (req.body.customDomain) return res.status(400).json({ message: 'Cannot update custom domain' });
 
     try {
         const updatedDomain = await domainService.updateDomain(id, { ...req.body, customDomain });
