@@ -48,6 +48,7 @@ function getDomainsByThirdLevelDomain(thirdLevelDomain) {
 }
 
 async function createDomain(domainData) {
+    console.log(domainData.customDomain);
     const fullDomain = domainData.customDomain ? domainData.customDomain : `${domainData.thirdLevelDomain}.${defaultSuffix}`;
 
     const id = uuidv4();
