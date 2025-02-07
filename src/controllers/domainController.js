@@ -111,7 +111,7 @@ const updateDomain = async (req, res) => {
     if (req.body.customDomain) return res.status(400).json({ message: 'Cannot update custom domain' });
 
     try {
-        const updatedDomain = await domainService.updateDomain(id, { ...req.body, customDomain });
+        const updatedDomain = await domainService.updateDomain(id, { ...req.body });
         if (!updatedDomain) return res.status(404).json({ message: 'Domain not found' });
 
         return res.json({
