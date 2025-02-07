@@ -48,14 +48,16 @@ function getDomainsByThirdLevelDomain(thirdLevelDomain) {
 }
 
 async function createDomain(domainData) {
-    const fullDomain = domainData.customDomain || `${domainData.thirdLevelDomain}.${defaultSuffix}`;
+    const fullDomain = domainData.customDomain ? domainData.customDomain : `${domainData.thirdLevelDomain}.${defaultSuffix}`;
 
     const id = uuidv4();
     let createdRecords;
-    try {
-        createdRecords = await upstreamApi.createSubdomain(fullDomain, domainData.targetIp);
-    } catch (error) {
-        throw new Error(`Error creating domain: ${error.message}`);
+    if (!domainData.customDomain) {
+        try {
+            createdRecords = await upstreamApi.createSubdomain(fullDomain, domainData.targetIp);
+        } catch (error) {
+            throw new Error(`Error creating domain: ${error.message}`);
+        }
     }
 
     return new Promise((resolve, reject) => {
