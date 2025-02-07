@@ -10,7 +10,7 @@ const getDomainsByThirdLevelDomain = async (req, res) => {
         return res.json(domains.map(domain => ({
             id: domain.id,
             serverId: domain.serverId,
-            domain: `${domain.thirdLevelDomain}.${process.env.SECOND_LEVEL_DOMAIN}`,
+            domain: domain.customDomain ? domain.customDomain : `${domain.thirdLevelDomain}.${process.env.DEFAULT_SUFFIX}`,
             targetIp: domain.targetIp,
             targetPort: domain.targetPort,
             ...JSON.parse(domain.otherData || '{}')
@@ -27,7 +27,7 @@ const getAllDomains = async (req, res) => {
         return res.json(domains.map(domain => ({
             id: domain.id,
             serverId: domain.serverId,
-            domain: `${domain.thirdLevelDomain}.${process.env.SECOND_LEVEL_DOMAIN}`,
+            domain: domain.customDomain ? domain.customDomain : `${domain.thirdLevelDomain}.${process.env.DEFAULT_SUFFIX}`,
             targetIp: domain.targetIp,
             targetPort: domain.targetPort,
             ...JSON.parse(domain.otherData || '{}')
@@ -45,7 +45,7 @@ const getDomainsByServerId = async (req, res) => {
         return res.json(domains.map(domain => ({
             id: domain.id,
             serverId: domain.serverId,
-            domain: `${domain.thirdLevelDomain}.${process.env.SECOND_LEVEL_DOMAIN}`,
+            domain: domain.customDomain ? domain.customDomain : `${domain.thirdLevelDomain}.${process.env.DEFAULT_SUFFIX}`,
             targetIp: domain.targetIp,
             targetPort: domain.targetPort,
             ...JSON.parse(domain.otherData || '{}')
@@ -63,7 +63,7 @@ const getDomainById = async (req, res) => {
         return res.json({
             id: domain.id,
             serverId: domain.serverId,
-            domain: `${domain.thirdLevelDomain}.${process.env.SECOND_LEVEL_DOMAIN}`,
+            domain: domain.customDomain ? domain.customDomain : `${domain.thirdLevelDomain}.${process.env.DEFAULT_SUFFIX}`,
             targetIp: domain.targetIp,
             targetPort: domain.targetPort,
             ...JSON.parse(domain.otherData || '{}')
@@ -92,7 +92,7 @@ const createDomain = async (req, res) => {
         return res.status(201).json({
             id: newDomain.id,
             serverId: newDomain.serverId,
-            domain: `${newDomain.thirdLevelDomain}.${process.env.SECOND_LEVEL_DOMAIN}`,
+            domain: newDomain.customDomain ? newDomain.customDomain : `${newDomain.thirdLevelDomain}.${process.env.DEFAULT_SUFFIX}`,
             targetIp: newDomain.targetIp,
             targetPort: newDomain.targetPort,
             ...newDomain.otherData
