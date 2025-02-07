@@ -225,8 +225,8 @@ function getServerIdByFullDomain(fullDomain) {
         const thirdLevelDomain = fullDomain.slice(0, -suffix.length);
 
         db.get(
-            'SELECT serverId FROM domains WHERE thirdLevelDomain = ?',
-            [thirdLevelDomain],
+            'SELECT serverId FROM domains WHERE thirdLevelDomain = ? OR customDomain = ?',
+            [thirdLevelDomain, fullDomain],
             (err, row) => {
                 if (err) return reject(err);
                 if (!row) return resolve(null);

@@ -29,7 +29,7 @@ const readBanByDomain = async (domain) => {
 	}
 
 	const domains = await new Promise((resolve, reject) => {
-		db.all('SELECT * FROM domains WHERE thirdLevelDomain = ?', [domain], (err, rows) => {
+		db.all('SELECT * FROM domains WHERE thirdLevelDomain = ? OR customDomain = ?', [domain, domain], (err, rows) => {
 			if (err) return reject(err);
 			resolve(rows);
 		});
