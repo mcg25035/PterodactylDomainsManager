@@ -51,7 +51,7 @@ async function createDomain(domainData) {
     const fullDomain = domainData.customDomain ? domainData.customDomain : `${domainData.thirdLevelDomain}.${defaultSuffix}`;
 
     const id = uuidv4();
-    let createdRecords;
+    let createdRecords = {};
     if (!domainData.customDomain) {
         try {
             createdRecords = await upstreamApi.createSubdomain(fullDomain, domainData.targetIp);
