@@ -216,13 +216,11 @@ function getServerIdByFullDomain(fullDomain) {
 
         // 先從 fullDomain 結尾把 .SECOND_LEVEL_DOMAIN 拿掉
         const suffix = `.${SECOND_LEVEL_DOMAIN}`; // => ".example.com"
-        if (!fullDomain.endsWith(suffix)) {
-            // fullDomain 不符合
-            return resolve(null);
+        let thirdLevelDomain;
+        if (fullDomain.endsWith(suffix)) {
+            thirdLevelDomain = fullDomain.slice(0, -suffix.length);
         }
-
-        // thirdLevelDomain => "mc"
-        const thirdLevelDomain = fullDomain.slice(0, -suffix.length);
+        
 
         console.log('thirdLevelDomain:', thirdLevelDomain);
         console.log('fullDomain:', fullDomain);
