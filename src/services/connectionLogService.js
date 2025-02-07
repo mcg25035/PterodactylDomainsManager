@@ -162,12 +162,11 @@ async function createConnectionLog({ fullDomain, playerName, playerIp, playerUui
 
     return new Promise((resolve, reject) => {
         const id = uuidv4();
-        const isCustomDomain = !fullDomain.endsWith(`.${process.env.SECOND_LEVEL_DOMAIN}`);
         db.run(`
-            INSERT INTO connectionLogs (id, serverId, fullDomain, playerName, playerIp, playerUuid, isCustomDomain)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO connectionLogs (id, serverId, fullDomain, playerName, playerIp, playerUuid)
+            VALUES (?, ?, ?, ?, ?, ?)
         `,
-        [id, serverId, fullDomain, playerName, playerIp, playerUuid, isCustomDomain],
+        [id, serverId, fullDomain, playerName, playerIp, playerUuid],
         function (err) {
             if (err) return reject(err);
             resolve({
