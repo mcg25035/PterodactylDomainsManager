@@ -63,8 +63,8 @@ async function createDomain(domainData) {
 
     return new Promise((resolve, reject) => {
         db.run(
-            `INSERT INTO domains (id, serverId, thirdLevelDomain, targetIp, targetPort, cloudflareARecordId, cloudflareSrvRecordId, otherData)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            `INSERT INTO domains (id, serverId, thirdLevelDomain, targetIp, targetPort, cloudflareARecordId, cloudflareSrvRecordId, otherData, customDomain)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
                 id,
                 domainData.serverId,
@@ -73,7 +73,8 @@ async function createDomain(domainData) {
                 domainData.targetPort,
                 createdRecords.aRecord ? createdRecords.aRecord.id : null,
                 createdRecords.srvRecord ? createdRecords.srvRecord.id : null,
-                JSON.stringify(domainData.otherData || {})
+                JSON.stringify(domainData.otherData || {}),
+                domainData.customDomain || null
             ],
             (err) => {
                 if (err) return reject(err);
@@ -85,7 +86,8 @@ async function createDomain(domainData) {
                     targetPort: domainData.targetPort,
                     otherData: domainData.otherData || {},
                     cloudflareARecordId: createdRecords.aRecord ? createdRecords.aRecord.id : null,
-                    cloudflareSrvRecordId: createdRecords.srvRecord ? createdRecords.srvRecord.id : null
+                    cloudflareSrvRecordId: createdRecords.srvRecord ? createdRecords.srvRecord.id : null,
+                    customDomain: domainData.customDomain || null
                 });
             }
         );
