@@ -12,6 +12,7 @@ const createBan = async (req, res) => {
 const readBanByDomain = async (req, res) => {
     try {
         const { domain } = req.params;
+        console.log("readBanByDomain: ", domain);
         const ban = await playerFirewallService.readBanByDomain(domain);
         res.status(200).json(ban);
     } catch (error) {
