@@ -13,10 +13,10 @@ const createBan = async (req, res) => {
 const readBanByDomain = async (req, res) => {
     try {
         let { domain } = req.params;
-        if (domain.endWith(process.env.DEFAULT_SUFFIX)) {
+        if (domain.endsWith(process.env.DEFAULT_SUFFIX)) {
             domain = domain.slice(0, -process.env.DEFAULT_SUFFIX.length - 1);
         }
-        
+
         const ban = await playerFirewallService.readBanByDomain(domain);
         res.status(200).json(ban);
     } catch (error) {
