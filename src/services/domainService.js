@@ -148,12 +148,13 @@ async function deleteDomain(id) {
     const domain = await getDomainById(id);
     if (!domain) return false;
 
-    const fullDomain = `${domain.thirdLevelDomain}.${secondLevelDomain}`;
+    const fullDomain = `${domain.thirdLevelDomain}.${defaultSuffix}`;
 
     try {
         await upstreamApi.deleteSubdomain(fullDomain);
     } catch (error) {
-        throw new Error(`Error deleting domain: ${error.message}`);
+        console.warn(`Deleting domain ${fullDomain} is not found in Cloudflare. Deleting from database only.`);
+        // throw new Error(`Error deleting domain: ${error.message}`);
     }
 
     return new Promise((resolve, reject) => {
