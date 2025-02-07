@@ -35,7 +35,7 @@ const readBanByDomain = async (domain) => {
 		});
 	});
 
-	const foundDomain = domains.find(d => d.thirdLevelDomain === domain);
+	const foundDomain = domains.find(d => d.thirdLevelDomain === domain || d.customDomain === domain);
 
 	if (!foundDomain) {
 		throw new Error('Domain not found.');
