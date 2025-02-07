@@ -97,7 +97,7 @@ async function syncFromCloudflare() {
 
     // 移除在CF不存在但本地有的資料(因為CF為準)
     for (const tld in localDomainMap) {
-        if (!domainMap[tld]) {
+        if (!domainMap[tld] && !localDomainMap[tld].customDomain) {
             // 從本地刪除
             await new Promise((resolve, reject) => {
                 db.run(

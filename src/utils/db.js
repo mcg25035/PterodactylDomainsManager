@@ -16,7 +16,8 @@ db.serialize(() => {
             targetPort INTEGER,
             cloudflareARecordId TEXT,
             cloudflareSrvRecordId TEXT,
-            otherData TEXT
+            otherData TEXT,
+            customDomain TEXT
         )
     `);
 
@@ -28,7 +29,8 @@ db.serialize(() => {
             playerName TEXT NOT NULL,
             playerIp TEXT NOT NULL,
             playerUuid TEXT NOT NULL,
-            connectedAt TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+            connectedAt TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+            customDomain TEXT
         )
     `);
 
@@ -42,6 +44,24 @@ db.serialize(() => {
             expiresAt INTEGER
         )
     `);
+
+    db.run("ALTER TABLE domains ADD COLUMN customDomain TEXT", (err) => {
+        if (err && !err.message.includes("duplicate column name")) {
+            console.error("Error adding customDomain column to domains table:", err.message);
+        }
+    });
+
+    db.run("ALTER TABLE connectionLogs ADD COLUMN customDomain TEXT", (err) => {
+        if (err && !err.message.includes("duplicate column name")) {
+            console.error("Error adding customDomain column to connectionLogs table:", err.message);
+        }
+    });
+
+    db.run("ALTER TABLE playerFirewall ADD COLUMN customDomain TEXT", (err) => {
+        if (err && !err.message.includes("duplicate column name")) {
+            console.error("Error adding customDomain column to playerFirewall table:", err.message);
+        }
+    });
 });
 
 module.exports = db;

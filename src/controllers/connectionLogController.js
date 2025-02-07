@@ -84,12 +84,13 @@ async function createConnectionLog(req, res) {
      */
     const { fullDomain, playerName, playerIp, playerUuid } = req.body;
     try {
-        const newLog = await connectionLogService.createConnectionLog({ 
-            fullDomain, 
-            playerName, 
+        const newLog = await connectionLogService.createConnectionLog({
+            fullDomain,
+            playerName,
             playerIp,
             playerUuid
         });
+        newLog.isCustomDomain = !fullDomain.endsWith(`.${process.env.SECOND_LEVEL_DOMAIN}`);
         return res.status(201).json(newLog);
     } catch (error) {
         console.error(`Error creating connection log: ${error.message}`);

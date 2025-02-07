@@ -4,10 +4,10 @@ const db = require('../utils/db');
 const upstreamApi = require('../utils/upstreamApi');
 require('dotenv').config();
 
-const secondLevelDomain = process.env.SECOND_LEVEL_DOMAIN;
+const defaultSuffix = process.env.DEFAULT_SUFFIX;
 
-if (!secondLevelDomain) {
-    throw new Error('SECOND_LEVEL_DOMAIN is not defined in the environment variables.');
+if (!defaultSuffix) {
+    throw new Error('DEFAULT_SUFFIX is not defined in the environment variables.');
 };
 
 function getAllDomains() {
@@ -48,7 +48,7 @@ function getDomainsByThirdLevelDomain(thirdLevelDomain) {
 }
 
 async function createDomain(domainData) {
-    const fullDomain = `${domainData.thirdLevelDomain}.${secondLevelDomain}`;
+    const fullDomain = domainData.customDomain || `${domainData.thirdLevelDomain}.${defaultSuffix}`;
 
     const id = uuidv4();
     let createdRecords;
@@ -93,9 +93,9 @@ async function updateDomain(id, updatedData) {
     const domain = await getDomainById(id);
     if (!domain) return null;
 
-    const originalFullDomain = `${domain.thirdLevelDomain}.${secondLevelDomain}`;
+    const originalFullDomain = domain.customDomain || `${domain.thirdLevelDomain}.${defaultSuffix}`;
     const newThirdLevelDomain = updatedData.thirdLevelDomain || domain.thirdLevelDomain;
-    const newFullDomain = `${newThirdLevelDomain}.${secondLevelDomain}`;
+    const newFullDomain = updatedData.customDomain || `${newThirdLevelDomain}.${defaultSuffix}`;
     const targetIp = updatedData.targetIp || domain.targetIp;
     const targetPort = updatedData.targetPort || domain.targetPort;
     const otherData = updatedData.otherData ? JSON.stringify(updatedData.otherData) : domain.otherData;

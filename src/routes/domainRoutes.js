@@ -22,7 +22,8 @@ router.post('/domains', [
     body('serverId').isUUID().withMessage('Invalid serverId format'),
     body('thirdLevelDomain').isString().notEmpty().withMessage('thirdLevelDomain is required'),
     body('targetIp').isIP().withMessage('Invalid target IP address'),
-    body('targetPort').isInt({ min: 1, max: 65535 }).withMessage('Invalid target port')
+    body('targetPort').isInt({ min: 1, max: 65535 }).withMessage('Invalid target port'),
+    body('customDomain').optional().isString().matches(/^(?!:\/\/)([a-zA-Z0-9-_]+\.)*[a-zA-Z0-9][a-zA-Z0-9-_]+\.[a-zA-Z]{2,11}?$/).withMessage('Invalid custom domain format')
 ], domainController.createDomain);
 
 // 更新網域
@@ -30,7 +31,8 @@ router.put('/domains/:id', [
     param('id').isUUID().withMessage('Invalid domain id format'),
     body('thirdLevelDomain').optional().isString().notEmpty().withMessage('thirdLevelDomain must be a non-empty string'),
     body('targetIp').optional().isIP().withMessage('Invalid target IP address'),
-    body('targetPort').optional().isInt({ min: 1, max: 65535 }).withMessage('Invalid target port')
+    body('targetPort').optional().isInt({ min: 1, max: 65535 }).withMessage('Invalid target port'),
+    body('customDomain').optional().isString().withMessage('Invalid custom domain')
 ], domainController.updateDomain);
 
 // 刪除網域

@@ -78,14 +78,15 @@ const createDomain = async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
 
-    const { serverId, thirdLevelDomain, targetIp, targetPort, ...otherData } = req.body;
+    const { serverId, thirdLevelDomain, targetIp, targetPort, customDomain, ...otherData } = req.body;
     try {
         const newDomain = await domainService.createDomain({
             serverId,
             thirdLevelDomain,
             targetIp,
             targetPort,
-            otherData
+            customDomain,
+            otherData,
         });
 
         return res.status(201).json({
@@ -109,7 +110,7 @@ const updateDomain = async (req, res) => {
     if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
 
     try {
-        const updatedDomain = await domainService.updateDomain(id, req.body);
+        const updatedDomain = await domainService.updateDomain(id, { ...req.body, customDomain });
         if (!updatedDomain) return res.status(404).json({ message: 'Domain not found' });
 
         return res.json({
