@@ -3,4 +3,3 @@ node_modules/
 service.sh
 .env
 package-lock.json
-package.json
