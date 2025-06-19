@@ -32,7 +32,8 @@ router.put('/domains/:id', [
     body('thirdLevelDomain').optional().isString().notEmpty().withMessage('thirdLevelDomain must be a non-empty string'),
     body('targetIp').optional().isIP().withMessage('Invalid target IP address'),
     body('targetPort').optional().isInt({ min: 1, max: 65535 }).withMessage('Invalid target port'),
-    body('customDomain').optional().isString().withMessage('Invalid custom domain')
+    body('customDomain').optional().isString().withMessage('Invalid custom domain'),
+    body('ipPortIndex').optional().isInt({ min: 0 }).withMessage('ipPortIndex must be a non-negative integer')
 ], domainController.updateDomain);
 
 // 刪除網域

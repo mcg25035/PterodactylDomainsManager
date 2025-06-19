@@ -78,16 +78,19 @@ const createDomain = async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
 
-    const { serverId, thirdLevelDomain, targetIp, targetPort, customDomain, ...otherData } = req.body;
+    const { serverId, thirdLevelDomain, targetIp, targetPort, customDomain, ...otherData } = req.body; // Removed ipPortIndex
     try {
-        const newDomain = await domainService.createDomain({
+        const domainPayload = {
             serverId,
             thirdLevelDomain,
             targetIp,
             targetPort,
             customDomain,
             otherData,
-        });
+        };
+        // ipPortIndex is no longer passed to domainService.createDomain
+        const newDomain = await domainService.createDomain(domainPayload);
+
 
         return res.status(201).json({
             id: newDomain.id,
@@ -110,8 +113,10 @@ const updateDomain = async (req, res) => {
     if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
     if (req.body.customDomain) return res.status(400).json({ message: 'Cannot update custom domain' });
 
+    const { ipPortIndex, ...domainData } = req.body;
+
     try {
-        const updatedDomain = await domainService.updateDomain(id, { ...req.body });
+        const updatedDomain = await domainService.updateDomain(id, domainData, ipPortIndex);
         if (!updatedDomain) return res.status(404).json({ message: 'Domain not found' });
 
         return res.json({

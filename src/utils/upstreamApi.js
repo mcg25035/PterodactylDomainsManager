@@ -4,11 +4,28 @@ const dotenv = require('dotenv');
 
 dotenv.config();
 
-const { CLOUDFLARE_API_TOKEN, CLOUDFLARE_ZONE_ID, FIXED_IP, FIXED_PORT, SECOND_LEVEL_DOMAIN } = process.env;
+const { CLOUDFLARE_API_TOKEN, CLOUDFLARE_ZONE_ID, FIXED_IP: FIXED_IP_STRING, FIXED_PORT: FIXED_PORT_STRING, SECOND_LEVEL_DOMAIN } = process.env;
 
-if (!CLOUDFLARE_API_TOKEN || !CLOUDFLARE_ZONE_ID || !FIXED_IP || !FIXED_PORT || !SECOND_LEVEL_DOMAIN) {
-    throw new Error('Missing required environment variables.');
+if (!CLOUDFLARE_API_TOKEN || !CLOUDFLARE_ZONE_ID || !FIXED_IP_STRING || !FIXED_PORT_STRING || !SECOND_LEVEL_DOMAIN) {
+    throw new Error('Missing required environment variables for Cloudflare API or domain configuration.');
 }
+
+const FIXED_IPS = FIXED_IP_STRING.split(',');
+const FIXED_PORTS = FIXED_PORT_STRING.split(',').map(port => parseInt(port.trim(), 10));
+
+if (FIXED_IPS.length === 0 || FIXED_PORTS.length === 0) {
+    throw new Error('FIXED_IP or FIXED_PORT environment variables are empty or invalid.');
+}
+
+if (FIXED_IPS.length !== FIXED_PORTS.length) {
+    throw new Error('The number of FIXED_IPs must match the number of FIXED_PORTs.');
+}
+
+FIXED_PORTS.forEach((port, index) => {
+    if (isNaN(port)) {
+        throw new Error(`Invalid port number at index ${index} in FIXED_PORT: ${FIXED_PORT_STRING}`);
+    }
+});
 
 const ZONE_NAME = SECOND_LEVEL_DOMAIN;
 
@@ -27,7 +44,12 @@ const getRecordName = (fullDomain) => {
     return fullDomain; 
 };
 
-const createSrvRecord = async (recordName) => {
+const createSrvRecord = async (recordName, portIndex = 0) => {
+    if (portIndex < 0 || portIndex >= FIXED_PORTS.length) {
+        throw new Error(`Invalid port index: ${portIndex}. Must be between 0 and ${FIXED_PORTS.length - 1}.`);
+    }
+    const selectedPort = FIXED_PORTS[portIndex];
+
     const srvName = `_minecraft._tcp.${recordName}`;
     const srvTarget = `${recordName}.${ZONE_NAME}`;
     const srvData = {
@@ -36,7 +58,7 @@ const createSrvRecord = async (recordName) => {
         name: recordName,
         priority: 0,
         weight: 5,
-        port: parseInt(FIXED_PORT, 10),
+        port: selectedPort,
         target: `${srvTarget}.`
     };
 
@@ -89,14 +111,18 @@ const findDnsRecord = async (fullDomain, type = 'A') => {
 module.exports = {
     fetchAllDnsRecords: fetchDnsRecords,
 
-    createSubdomain: async function (fullDomain, targetIp) {
+    createSubdomain: async function (fullDomain, targetIp, ipPortIndex = 0) {
+        if (ipPortIndex < 0 || ipPortIndex >= FIXED_IPS.length) {
+            throw new Error(`Invalid IP/Port index: ${ipPortIndex}. Must be between 0 and ${FIXED_IPS.length - 1}.`);
+        }
+
         const isMcSubdomain = fullDomain.startsWith('mc');
 
         const existingARecord = await findDnsRecord(fullDomain, 'A');
         if (existingARecord) throw new Error(`Subdomain ${fullDomain} already exists.`);
 
         const recordName = getRecordName(fullDomain);
-        const ipToUse = isMcSubdomain ? FIXED_IP : targetIp;
+        const ipToUse = isMcSubdomain ? FIXED_IPS[ipPortIndex] : targetIp;
 
         const aRecordResponse = await cloudflareApi.post(`/zones/${CLOUDFLARE_ZONE_ID}/dns_records`, {
             type: 'A',
@@ -114,16 +140,26 @@ module.exports = {
 
         if (!isMcSubdomain) return { aRecord: createdARecord, srvRecord: null };
 
-        const createdSrvRecord = await createSrvRecord(recordName);
+        const createdSrvRecord = await createSrvRecord(recordName, ipPortIndex);
         return { aRecord: createdARecord, srvRecord: createdSrvRecord };
     },
 
-    updateSubdomain: async function (fullDomain, newFullDomain, targetIp) {
+    updateSubdomain: async function (fullDomain, newFullDomain, targetIp, ipPortIndex = 0) {
         const isMcSubdomain = fullDomain.startsWith('mc');
 
+        // When updating, we delete the old records first.
         await this.deleteSubdomain(fullDomain);
-        const updatedARecord = (await this.createSubdomain(newFullDomain, targetIp))?.aRecord;
-        const updatedSrvRecord = await findDnsRecord(newFullDomain, 'SRV');
+
+        // Then create new records with potentially new IP/Port from the selected index
+        const creationResult = await this.createSubdomain(newFullDomain, targetIp, ipPortIndex);
+        const updatedARecord = creationResult?.aRecord;
+
+        // For mc subdomains, SRV record needs to be explicitly found or recreated if logic implies.
+        // createSubdomain already handles SRV creation with the correct port index.
+        const updatedSrvRecord = isMcSubdomain ? creationResult?.srvRecord : null;
+        // If createSubdomain doesn't return srvRecord directly in all cases or if separate fetch is preferred:
+        // const updatedSrvRecord = isMcSubdomain ? await findDnsRecord(newFullDomain, 'SRV') : null;
+
 
         if (!isMcSubdomain) return { aRecord: updatedARecord, srvRecord: null };
 

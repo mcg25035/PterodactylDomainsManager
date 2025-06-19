@@ -47,7 +47,7 @@ function getDomainsByThirdLevelDomain(thirdLevelDomain) {
     });
 }
 
-async function createDomain(domainData) {
+async function createDomain(domainData) { // Removed ipPortIndex
     console.log(domainData.customDomain);
     const fullDomain = domainData.customDomain ? domainData.customDomain : `${domainData.thirdLevelDomain}.${defaultSuffix}`;
 
@@ -55,6 +55,7 @@ async function createDomain(domainData) {
     let createdRecords = {};
     if (!domainData.customDomain) {
         try {
+            // ipPortIndex is no longer passed; upstreamApi.createSubdomain will use its default (0)
             createdRecords = await upstreamApi.createSubdomain(fullDomain, domainData.targetIp);
         } catch (error) {
             throw new Error(`Error creating domain: ${error.message}`);
@@ -94,23 +95,32 @@ async function createDomain(domainData) {
     });
 }
 
-async function updateDomain(id, updatedData) {
+async function updateDomain(id, updatedData, ipPortIndex = 0) { // Added ipPortIndex, default to 0
     const domain = await getDomainById(id);
     if (!domain) return null;
 
     const originalFullDomain = domain.customDomain || `${domain.thirdLevelDomain}.${defaultSuffix}`;
     const newThirdLevelDomain = updatedData.thirdLevelDomain || domain.thirdLevelDomain;
-    const newFullDomain = updatedData.customDomain || `${newThirdLevelDomain}.${defaultSuffix}`;
+    const newFullDomain = updatedData.customDomain || `${newThirdLevelDomain}.${defaultSuffix}`; // Custom domains cannot be updated via this method based on controller logic
     const targetIp = updatedData.targetIp || domain.targetIp;
     const targetPort = updatedData.targetPort || domain.targetPort;
     const otherData = updatedData.otherData ? JSON.stringify(updatedData.otherData) : domain.otherData;
 
     let updatedRecords;
-    try {
-        updatedRecords = await upstreamApi.updateSubdomain(originalFullDomain, newFullDomain, targetIp);
-    } catch (error) {
-        throw new Error(`Error updating domain: ${error.message}`);
+    // Only call upstreamApi if it's not a custom domain being managed externally
+    if (!domain.customDomain) {
+        try {
+            // Pass ipPortIndex to upstreamApi.updateSubdomain
+            updatedRecords = await upstreamApi.updateSubdomain(originalFullDomain, newFullDomain, targetIp, ipPortIndex);
+        } catch (error) {
+            throw new Error(`Error updating domain DNS records: ${error.message}`);
+        }
+    } else {
+        // For custom domains, we might not update DNS via API, or handle differently.
+        // For now, assume no DNS update call for customDomain, but retain existing record IDs.
+        updatedRecords = { aRecord: { id: domain.cloudflareARecordId }, srvRecord: { id: domain.cloudflareSrvRecordId } };
     }
+
 
     return new Promise((resolve, reject) => {
         db.run(
