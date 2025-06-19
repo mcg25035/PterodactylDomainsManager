@@ -47,7 +47,7 @@ function getDomainsByThirdLevelDomain(thirdLevelDomain) {
     });
 }
 
-async function createDomain(domainData) { // Removed ipPortIndex
+async function createDomain(domainData) {
     console.log(domainData.customDomain);
     const fullDomain = domainData.customDomain ? domainData.customDomain : `${domainData.thirdLevelDomain}.${defaultSuffix}`;
 
@@ -55,7 +55,6 @@ async function createDomain(domainData) { // Removed ipPortIndex
     let createdRecords = {};
     if (!domainData.customDomain) {
         try {
-            // ipPortIndex is no longer passed; upstreamApi.createSubdomain will use its default (0)
             createdRecords = await upstreamApi.createSubdomain(fullDomain, domainData.targetIp);
         } catch (error) {
             throw new Error(`Error creating domain: ${error.message}`);
@@ -108,19 +107,15 @@ async function updateDomain(id, updatedData, ipPortIndex = 0) { // Added ipPortI
 
     let updatedRecords;
     // Only call upstreamApi if it's not a custom domain being managed externally
-    if (!domain.customDomain) {
-        try {
-            // Pass ipPortIndex to upstreamApi.updateSubdomain
-            updatedRecords = await upstreamApi.updateSubdomain(originalFullDomain, newFullDomain, targetIp, ipPortIndex);
-        } catch (error) {
-            throw new Error(`Error updating domain DNS records: ${error.message}`);
-        }
-    } else {
-        // For custom domains, we might not update DNS via API, or handle differently.
-        // For now, assume no DNS update call for customDomain, but retain existing record IDs.
-        updatedRecords = { aRecord: { id: domain.cloudflareARecordId }, srvRecord: { id: domain.cloudflareSrvRecordId } };
+    if (domain.customDomain) {
+        throw new Error('Cannot update custom domain via this method. Please use the appropriate API for custom domains.');
     }
-
+    try {
+        // Pass ipPortIndex to upstreamApi.updateSubdomain
+        updatedRecords = await upstreamApi.updateSubdomain(originalFullDomain, newFullDomain, targetIp, ipPortIndex);        
+    } catch (error) {
+        throw new Error(`Error updating domain DNS records: ${error.message}`);
+    }
 
     return new Promise((resolve, reject) => {
         db.run(

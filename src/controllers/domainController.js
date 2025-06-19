@@ -88,7 +88,6 @@ const createDomain = async (req, res) => {
             customDomain,
             otherData,
         };
-        // ipPortIndex is no longer passed to domainService.createDomain
         const newDomain = await domainService.createDomain(domainPayload);
 
 
