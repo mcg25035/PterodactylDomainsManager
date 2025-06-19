@@ -154,11 +154,7 @@ module.exports = {
         const creationResult = await this.createSubdomain(newFullDomain, targetIp, ipPortIndex);
         const updatedARecord = creationResult?.aRecord;
 
-        // For mc subdomains, SRV record needs to be explicitly found or recreated if logic implies.
-        // createSubdomain already handles SRV creation with the correct port index.
-        const updatedSrvRecord = isMcSubdomain ? creationResult?.srvRecord : null;
-        // If createSubdomain doesn't return srvRecord directly in all cases or if separate fetch is preferred:
-        // const updatedSrvRecord = isMcSubdomain ? await findDnsRecord(newFullDomain, 'SRV') : null;
+        const updatedSrvRecord = isMcSubdomain ? await findDnsRecord(newFullDomain, 'SRV') : null;
 
 
         if (!isMcSubdomain) return { aRecord: updatedARecord, srvRecord: null };
