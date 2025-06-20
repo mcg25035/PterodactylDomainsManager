@@ -1,5 +1,6 @@
 # .gitignore
 node_modules/
 service.sh
+data/
 .env
 package-lock.json
