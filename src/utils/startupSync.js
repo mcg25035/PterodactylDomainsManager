@@ -57,24 +57,24 @@ async function syncFromCloudflare() {
 
         // 如果本地沒有，新增
         if (!localData) {
-            const id = uuidv4();
-            await new Promise((resolve, reject) => {
-                db.run(
-                    `INSERT INTO domains (id, serverId, thirdLevelDomain, targetIp, targetPort, cloudflareARecordId, cloudflareSrvRecordId, otherData)
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-                    [
-                        id,
-                        '', // serverId等使用者操作時再補上
-                        cfData.thirdLevelDomain,
-                        cfData.targetIp || null,
-                        null,
-                        cfData.cloudflareARecordId || null,
-                        cfData.cloudflareSrvRecordId || null,
-                        JSON.stringify({})
-                    ],
-                    (err) => (err ? reject(err) : resolve())
-                );
-            });
+            // const id = uuidv4();
+            // await new Promise((resolve, reject) => {
+            //     db.run(
+            //         `INSERT INTO domains (id, serverId, thirdLevelDomain, targetIp, targetPort, cloudflareARecordId, cloudflareSrvRecordId, otherData)
+            //          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            //         [
+            //             id,
+            //             '', // serverId等使用者操作時再補上
+            //             cfData.thirdLevelDomain,
+            //             cfData.targetIp || null,
+            //             null,
+            //             cfData.cloudflareARecordId || null,
+            //             cfData.cloudflareSrvRecordId || null,
+            //             JSON.stringify({})
+            //         ],
+            //         (err) => (err ? reject(err) : resolve())
+            //     );
+            // });
             continue;
         }
 
