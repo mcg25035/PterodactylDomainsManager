@@ -34,6 +34,12 @@ db.serialize(() => {
         )
     `);
 
+    db.run("ALTER TABLE domains ADD COLUMN ipPortIndex INTEGER DEFAULT 0", (err) => {
+        if (err && !err.message.includes("duplicate column name")) {
+            console.error("Error adding ipPortIndex column to domains table:", err.message);
+        }
+    });
+
     db.run(`
         CREATE TABLE IF NOT EXISTS playerFirewall (
             id TEXT PRIMARY KEY,

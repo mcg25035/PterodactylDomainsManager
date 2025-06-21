@@ -12,7 +12,7 @@ if (!defaultSuffix) {
 
 function getAllDomains() {
     return new Promise((resolve, reject) => {
-        db.all('SELECT * FROM domains', (err, rows) => {
+        db.all('SELECT *, ipPortIndex FROM domains', (err, rows) => {
             if (err) return reject(err);
             resolve(rows);
         });
@@ -21,7 +21,7 @@ function getAllDomains() {
 
 function getDomainsByServerId(serverId) {
     return new Promise((resolve, reject) => {
-        db.all('SELECT * FROM domains WHERE serverId = ?', [serverId], (err, rows) => {
+        db.all('SELECT *, ipPortIndex FROM domains WHERE serverId = ?', [serverId], (err, rows) => {
             if (err) return reject(err);
             resolve(rows);
         });
@@ -30,7 +30,7 @@ function getDomainsByServerId(serverId) {
 
 function getDomainById(id) {
     return new Promise((resolve, reject) => {
-        db.get('SELECT * FROM domains WHERE id = ?', [id], (err, row) => {
+        db.get('SELECT *, ipPortIndex FROM domains WHERE id = ?', [id], (err, row) => {
             if (err) return reject(err);
             if (!row) return resolve(null);
             resolve(row);
@@ -40,7 +40,7 @@ function getDomainById(id) {
 
 function getDomainsByThirdLevelDomain(thirdLevelDomain) {
     return new Promise((resolve, reject) => {
-        db.all('SELECT * FROM domains WHERE thirdLevelDomain = ?', [thirdLevelDomain], (err, rows) => {
+        db.all('SELECT *, ipPortIndex FROM domains WHERE thirdLevelDomain = ?', [thirdLevelDomain], (err, rows) => {
             if (err) return reject(err);
             resolve(rows);
         });
@@ -63,8 +63,8 @@ async function createDomain(domainData) {
 
     return new Promise((resolve, reject) => {
         db.run(
-            `INSERT INTO domains (id, serverId, thirdLevelDomain, targetIp, targetPort, cloudflareARecordId, cloudflareSrvRecordId, otherData, customDomain)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            `INSERT INTO domains (id, serverId, thirdLevelDomain, targetIp, targetPort, cloudflareARecordId, cloudflareSrvRecordId, otherData, customDomain, ipPortIndex)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
                 id,
                 domainData.serverId,
@@ -74,7 +74,8 @@ async function createDomain(domainData) {
                 createdRecords.aRecord ? createdRecords.aRecord.id : null,
                 createdRecords.srvRecord ? createdRecords.srvRecord.id : null,
                 JSON.stringify(domainData.otherData || {}),
-                domainData.customDomain || null
+                domainData.customDomain || null,
+                0 // Default ipPortIndex to 0 for new creations
             ],
             (err) => {
                 if (err) return reject(err);
@@ -87,7 +88,8 @@ async function createDomain(domainData) {
                     otherData: domainData.otherData || {},
                     cloudflareARecordId: createdRecords.aRecord ? createdRecords.aRecord.id : null,
                     cloudflareSrvRecordId: createdRecords.srvRecord ? createdRecords.srvRecord.id : null,
-                    customDomain: domainData.customDomain || null
+                    customDomain: domainData.customDomain || null,
+                    ipPortIndex: 0 // Default ipPortIndex to 0 for new creations
                 });
             }
         );
@@ -120,7 +122,7 @@ async function updateDomain(id, updatedData, ipPortIndex = 0) { // Added ipPortI
     return new Promise((resolve, reject) => {
         db.run(
             `UPDATE domains 
-             SET thirdLevelDomain = ?, targetIp = ?, targetPort = ?, cloudflareARecordId = ?, cloudflareSrvRecordId = ?, otherData = ?
+             SET thirdLevelDomain = ?, targetIp = ?, targetPort = ?, cloudflareARecordId = ?, cloudflareSrvRecordId = ?, otherData = ?, ipPortIndex = ?
              WHERE id = ?`,
             [
                 newThirdLevelDomain,
@@ -129,6 +131,7 @@ async function updateDomain(id, updatedData, ipPortIndex = 0) { // Added ipPortI
                 updatedRecords.aRecord ? updatedRecords.aRecord.id : domain.cloudflareARecordId,
                 updatedRecords.srvRecord ? updatedRecords.srvRecord.id : domain.cloudflareSrvRecordId,
                 otherData,
+                ipPortIndex, // Add ipPortIndex to the update parameters
                 id
             ],
             function (err) {
@@ -142,7 +145,8 @@ async function updateDomain(id, updatedData, ipPortIndex = 0) { // Added ipPortI
                     targetPort,
                     otherData: otherData ? JSON.parse(otherData) : {},
                     cloudflareARecordId: updatedRecords.aRecord ? updatedRecords.aRecord.id : domain.cloudflareARecordId,
-                    cloudflareSrvRecordId: updatedRecords.srvRecord ? updatedRecords.srvRecord.id : domain.cloudflareSrvRecordId
+                    cloudflareSrvRecordId: updatedRecords.srvRecord ? updatedRecords.srvRecord.id : domain.cloudflareSrvRecordId,
+                    ipPortIndex // Include ipPortIndex in the resolved object
                 });
             }
         );

@@ -1,5 +1,6 @@
 # .gitignore
 node_modules/
+data/
 service.sh
 data/
 .env

@@ -13,6 +13,7 @@ const getDomainsByThirdLevelDomain = async (req, res) => {
             domain: domain.customDomain ? domain.customDomain : `${domain.thirdLevelDomain}.${process.env.DEFAULT_SUFFIX}`,
             targetIp: domain.targetIp,
             targetPort: domain.targetPort,
+            ipPortIndex: domain.ipPortIndex, // Include ipPortIndex
             ...JSON.parse(domain.otherData || '{}')
         })));
     } catch (error) {
@@ -30,6 +31,7 @@ const getAllDomains = async (req, res) => {
             domain: domain.customDomain ? domain.customDomain : `${domain.thirdLevelDomain}.${process.env.DEFAULT_SUFFIX}`,
             targetIp: domain.targetIp,
             targetPort: domain.targetPort,
+            ipPortIndex: domain.ipPortIndex, // Include ipPortIndex
             ...JSON.parse(domain.otherData || '{}')
         })));
     } catch (error) {
@@ -48,6 +50,7 @@ const getDomainsByServerId = async (req, res) => {
             domain: domain.customDomain ? domain.customDomain : `${domain.thirdLevelDomain}.${process.env.DEFAULT_SUFFIX}`,
             targetIp: domain.targetIp,
             targetPort: domain.targetPort,
+            ipPortIndex: domain.ipPortIndex, // Include ipPortIndex
             ...JSON.parse(domain.otherData || '{}')
         })));
     } catch (error) {
@@ -66,6 +69,7 @@ const getDomainById = async (req, res) => {
             domain: domain.customDomain ? domain.customDomain : `${domain.thirdLevelDomain}.${process.env.DEFAULT_SUFFIX}`,
             targetIp: domain.targetIp,
             targetPort: domain.targetPort,
+            ipPortIndex: domain.ipPortIndex, // Include ipPortIndex
             ...JSON.parse(domain.otherData || '{}')
         });
     } catch (error) {
@@ -124,6 +128,7 @@ const updateDomain = async (req, res) => {
             domain: `${updatedDomain.thirdLevelDomain}.${process.env.SECOND_LEVEL_DOMAIN}`,
             targetIp: updatedDomain.targetIp,
             targetPort: updatedDomain.targetPort,
+            ipPortIndex: updatedDomain.ipPortIndex, // Include ipPortIndex
             ...updatedDomain.otherData
         });
     } catch (error) {
