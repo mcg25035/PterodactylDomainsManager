@@ -131,7 +131,7 @@ async function updateDomain(id, updatedData, ipPortIndex = 0) { // Added ipPortI
              WHERE id = ?`,
             [
                 newThirdLevelDomain,
-                updatedRecords.aRecord.content || targetIp,
+                updatedRecords.aRecord ? updatedRecords.aRecord.content : targetIp, 
                 targetPort,
                 updatedRecords.aRecord ? updatedRecords.aRecord.id : domain.cloudflareARecordId,
                 updatedRecords.srvRecord ? updatedRecords.srvRecord.id : domain.cloudflareSrvRecordId,
@@ -145,7 +145,7 @@ async function updateDomain(id, updatedData, ipPortIndex = 0) { // Added ipPortI
                     id,
                     serverId: domain.serverId,
                     thirdLevelDomain: newThirdLevelDomain,
-                    targetIp,
+                    targetIp: updatedRecords.aRecord ? updatedRecords.aRecord.content : targetIp,
                     targetPort,
                     otherData: otherData ? JSON.parse(otherData) : {},
                     cloudflareARecordId: updatedRecords.aRecord ? updatedRecords.aRecord.id : domain.cloudflareARecordId,
