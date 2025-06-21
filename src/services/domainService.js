@@ -117,6 +117,10 @@ async function updateDomain(id, updatedData, ipPortIndex = 0) { // Added ipPortI
         throw new Error(`Error updating domain DNS records: ${error.message}`);
     }
 
+    console.log('-- debug --');
+    console.log(JSON.stringify(updatedRecords, null, 2));
+    console.log('-- debug end --');
+
     return new Promise((resolve, reject) => {
         db.run(
             `UPDATE domains 
