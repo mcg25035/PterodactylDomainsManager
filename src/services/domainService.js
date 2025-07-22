@@ -12,7 +12,7 @@ if (!defaultSuffix) {
 
 function getAllDomains() {
     return new Promise((resolve, reject) => {
-        db.all('SELECT *, ipPortIndex FROM domains', (err, rows) => {
+        db.all('SELECT * FROM domains', (err, rows) => {
             if (err) return reject(err);
             resolve(rows);
         });
@@ -21,7 +21,7 @@ function getAllDomains() {
 
 function getDomainsByServerId(serverId) {
     return new Promise((resolve, reject) => {
-        db.all('SELECT *, ipPortIndex FROM domains WHERE serverId = ?', [serverId], (err, rows) => {
+        db.all('SELECT * FROM domains WHERE serverId = ?', [serverId], (err, rows) => {
             if (err) return reject(err);
             resolve(rows);
         });
@@ -30,7 +30,7 @@ function getDomainsByServerId(serverId) {
 
 function getDomainById(id) {
     return new Promise((resolve, reject) => {
-        db.get('SELECT *, ipPortIndex FROM domains WHERE id = ?', [id], (err, row) => {
+        db.get('SELECT * FROM domains WHERE id = ?', [id], (err, row) => {
             if (err) return reject(err);
             if (!row) return resolve(null);
             resolve(row);
@@ -40,7 +40,7 @@ function getDomainById(id) {
 
 function getDomainsByThirdLevelDomain(thirdLevelDomain) {
     return new Promise((resolve, reject) => {
-        db.all('SELECT *, ipPortIndex FROM domains WHERE thirdLevelDomain = ?', [thirdLevelDomain], (err, rows) => {
+        db.all('SELECT * FROM domains WHERE thirdLevelDomain = ?', [thirdLevelDomain], (err, rows) => {
             if (err) return reject(err);
             resolve(rows);
         });
@@ -96,7 +96,7 @@ async function createDomain(domainData) {
     });
 }
 
-async function updateDomain(id, updatedData, ipPortIndex = 0) { // Added ipPortIndex, default to 0
+async function updateDomain(id, updatedData, ipPortIndex = -1) { // Added ipPortIndex, default to 0
     const domain = await getDomainById(id);
     if (!domain) return null;
 
@@ -105,6 +105,7 @@ async function updateDomain(id, updatedData, ipPortIndex = 0) { // Added ipPortI
     const newFullDomain = updatedData.customDomain || `${newThirdLevelDomain}.${defaultSuffix}`; // Custom domains cannot be updated via this method based on controller logic
     const targetIp = updatedData.targetIp || domain.targetIp;
     const targetPort = updatedData.targetPort || domain.targetPort;
+    const ipPortIndex = (ipPortIndex == -1) ? (domain.ipPortIndex ?? 0) : ipPortIndex;
     const otherData = updatedData.otherData ? JSON.stringify(updatedData.otherData) : domain.otherData;
 
     let updatedRecords;
