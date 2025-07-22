@@ -4,10 +4,12 @@ require('dotenv').config(); // Load environment variables
 const express = require('express');
 const bodyParser = require('body-parser');
 const domainRoutes = require('./routes/domainRoutes');
+const fixedEndpointsRoutes = require('./routes/fixedEndpointsRoutes');
 const connectionLogRoutes = require('./routes/connectionLogRoutes');
 const apiKeyMiddleware = require('./middleware/apiKeyMiddleware'); // Import middleware
 const errorHandler = require('./middleware/errorHandler');
 const startupSync = require('./utils/startupSync');
+const playerFirewallRoutes = require('./routes/playerFirewallRoutes');
 const { cleanupExpiredBans } = require('./services/playerFirewallService');
 
 const app = express();
@@ -21,8 +23,8 @@ app.use(errorHandler);
 // Routes
 app.use('/api', domainRoutes);
 app.use('/api', connectionLogRoutes);
+app.use('/api', fixedEndpointsRoutes);
 
-const playerFirewallRoutes = require('./routes/playerFirewallRoutes');
 app.use('/api/playerfirewall', playerFirewallRoutes);
 
 // Root route

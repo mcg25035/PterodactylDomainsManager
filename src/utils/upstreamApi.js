@@ -188,5 +188,15 @@ module.exports = {
 
         const existingSrvRecord = await findDnsRecord(fullDomain, 'SRV');
         if (existingSrvRecord) await deleteSrvRecord(existingSrvRecord);
-    }
+    },
+
+    getFixedEndpoints: function () {
+        return FIXED_ENDPOINTS.map((endpoint, index) => ({
+            ...endpoint,
+            name: `Endpoint ${index + 1}`,
+            index: index
+        }));
+    },
+
+
 };
