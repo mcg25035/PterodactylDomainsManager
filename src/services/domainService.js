@@ -105,7 +105,7 @@ async function updateDomain(id, updatedData, ipPortIndex = -1) { // Added ipPort
     const newFullDomain = updatedData.customDomain || `${newThirdLevelDomain}.${defaultSuffix}`; // Custom domains cannot be updated via this method based on controller logic
     const targetIp = updatedData.targetIp || domain.targetIp;
     const targetPort = updatedData.targetPort || domain.targetPort;
-    const ipPortIndex = (ipPortIndex == -1) ? (domain.ipPortIndex ?? 0) : ipPortIndex;
+    ipPortIndex = (ipPortIndex == -1) ? (domain.ipPortIndex ?? 0) : ipPortIndex;
     const otherData = updatedData.otherData ? JSON.stringify(updatedData.otherData) : domain.otherData;
 
     let updatedRecords;
