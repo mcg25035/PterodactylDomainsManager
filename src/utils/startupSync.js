@@ -30,7 +30,6 @@ async function syncFromCloudflare() {
 
         if (record.type === 'SRV') {
             domainMap[thirdLevelDomain].cloudflareSrvRecordId = record.id;
-            // SRV記錄的port固定在環境變數FIXED_PORT，所以不從CF取
         }
     }
 

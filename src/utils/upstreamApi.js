@@ -1,31 +1,42 @@
 // src/utils/upstreamApi.js
 const axios = require('axios');
 const dotenv = require('dotenv');
+const db = require('./db'); // Import the database connection
 
 dotenv.config();
 
-const { CLOUDFLARE_API_TOKEN, CLOUDFLARE_ZONE_ID, FIXED_IP: FIXED_IP_STRING, FIXED_PORT: FIXED_PORT_STRING, SECOND_LEVEL_DOMAIN } = process.env;
+const { CLOUDFLARE_API_TOKEN, CLOUDFLARE_ZONE_ID, SECOND_LEVEL_DOMAIN } = process.env;
 
-if (!CLOUDFLARE_API_TOKEN || !CLOUDFLARE_ZONE_ID || !FIXED_IP_STRING || !FIXED_PORT_STRING || !SECOND_LEVEL_DOMAIN) {
+if (!CLOUDFLARE_API_TOKEN || !CLOUDFLARE_ZONE_ID || !SECOND_LEVEL_DOMAIN) {
     throw new Error('Missing required environment variables for Cloudflare API or domain configuration.');
 }
 
-const FIXED_IPS = FIXED_IP_STRING.split(',');
-const FIXED_PORTS = FIXED_PORT_STRING.split(',').map(port => parseInt(port.trim(), 10));
+let FIXED_ENDPOINTS = [];
 
-if (FIXED_IPS.length === 0 || FIXED_PORTS.length === 0) {
-    throw new Error('FIXED_IP or FIXED_PORT environment variables are empty or invalid.');
-}
+const getFixedEndpointsFromDb = () => {
+    return new Promise((resolve, reject) => {
+        db.all("SELECT ip, port FROM fixed_endpoints ORDER BY id ASC", (err, rows) => {
+            if (err) {
+                reject(err);
+            } else {
+                resolve(rows);
+            }
+        });
+    });
+};
 
-if (FIXED_IPS.length !== FIXED_PORTS.length) {
-    throw new Error('The number of FIXED_IPs must match the number of FIXED_PORTs.');
-}
-
-FIXED_PORTS.forEach((port, index) => {
-    if (isNaN(port)) {
-        throw new Error(`Invalid port number at index ${index} in FIXED_PORT: ${FIXED_PORT_STRING}`);
+// Initialize fixed endpoints on startup
+(async () => {
+    try {
+        FIXED_ENDPOINTS = await getFixedEndpointsFromDb();
+        if (FIXED_ENDPOINTS.length === 0) {
+            console.warn("No fixed endpoints found in the database. Please ensure migration from .env has run or add them manually.");
+        }
+    } catch (error) {
+        console.error("Failed to load fixed endpoints from database:", error.message);
+        // Depending on criticality, you might want to throw an error here or use a fallback
     }
-});
+})();
 
 const ZONE_NAME = SECOND_LEVEL_DOMAIN;
 
@@ -45,10 +56,10 @@ const getRecordName = (fullDomain) => {
 };
 
 const createSrvRecord = async (recordName, portIndex = 0) => {
-    if (portIndex < 0 || portIndex >= FIXED_PORTS.length) {
-        throw new Error(`Invalid port index: ${portIndex}. Must be between 0 and ${FIXED_PORTS.length - 1}.`);
+    if (portIndex < 0 || portIndex >= FIXED_ENDPOINTS.length) {
+        throw new Error(`Invalid port index: ${portIndex}. Must be between 0 and ${FIXED_ENDPOINTS.length - 1}.`);
     }
-    const selectedPort = FIXED_PORTS[portIndex];
+    const selectedPort = FIXED_ENDPOINTS[portIndex].port;
 
     const srvName = `_minecraft._tcp.${recordName}`;
     const srvTarget = `${recordName}.${ZONE_NAME}`;
@@ -112,8 +123,8 @@ module.exports = {
     fetchAllDnsRecords: fetchDnsRecords,
 
     createSubdomain: async function (fullDomain, targetIp, ipPortIndex = 0) {
-        if (ipPortIndex < 0 || ipPortIndex >= FIXED_IPS.length) {
-            throw new Error(`Invalid IP/Port index: ${ipPortIndex}. Must be between 0 and ${FIXED_IPS.length - 1}.`);
+        if (ipPortIndex < 0 || ipPortIndex >= FIXED_ENDPOINTS.length) {
+            throw new Error(`Invalid IP/Port index: ${ipPortIndex}. Must be between 0 and ${FIXED_ENDPOINTS.length - 1}.`);
         }
 
         const isMcSubdomain = fullDomain.startsWith('mc');
@@ -122,7 +133,7 @@ module.exports = {
         if (existingARecord) throw new Error(`Subdomain ${fullDomain} already exists.`);
 
         const recordName = getRecordName(fullDomain);
-        const ipToUse = isMcSubdomain ? FIXED_IPS[ipPortIndex] : targetIp;
+        const ipToUse = isMcSubdomain ? FIXED_ENDPOINTS[ipPortIndex].ip : targetIp;
 
         const aRecordResponse = await cloudflareApi.post(`/zones/${CLOUDFLARE_ZONE_ID}/dns_records`, {
             type: 'A',

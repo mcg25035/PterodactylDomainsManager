@@ -34,6 +34,50 @@ db.serialize(() => {
         )
     `);
 
+    db.run(`
+        CREATE TABLE IF NOT EXISTS fixed_endpoints (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ip TEXT NOT NULL,
+            port INTEGER NOT NULL,
+            createdAt TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+        )
+    `);
+
+    // Migration logic for FIXED_IP and FIXED_PORT from .env
+    db.get("SELECT COUNT(*) AS count FROM fixed_endpoints", (err, row) => {
+        if (err) {
+            console.error("Error checking fixed_endpoints table:", err.message);
+            return;
+        }
+        if (row.count === 0) {
+            console.log("Migrating FIXED_IP and FIXED_PORT from .env to database...");
+            const fixedIps = process.env.FIXED_IP ? process.env.FIXED_IP.split(',').map(s => s.trim()) : [];
+            const fixedPorts = process.env.FIXED_PORT ? process.env.FIXED_PORT.split(',').map(s => parseInt(s.trim())) : [];
+
+            const endpointsToInsert = [];
+            for (let i = 0; i < Math.min(fixedIps.length, fixedPorts.length); i++) {
+                if (fixedIps[i] && !isNaN(fixedPorts[i])) {
+                    endpointsToInsert.push({ ip: fixedIps[i], port: fixedPorts[i] });
+                }
+            }
+
+            if (endpointsToInsert.length > 0) {
+                db.serialize(() => {
+                    const stmt = db.prepare("INSERT INTO fixed_endpoints (ip, port) VALUES (?, ?)");
+                    endpointsToInsert.forEach(endpoint => {
+                        stmt.run(endpoint.ip, endpoint.port);
+                    });
+                    stmt.finalize();
+                    console.log(`Migrated ${endpointsToInsert.length} fixed endpoints.`);
+                });
+            } else {
+                console.log("No FIXED_IP or FIXED_PORT found in .env for migration.");
+            }
+        } else {
+            console.log("fixed_endpoints table already contains data, skipping migration.");
+        }
+    });
+
     db.run("ALTER TABLE domains ADD COLUMN ipPortIndex INTEGER DEFAULT 0", (err) => {
         if (err && !err.message.includes("duplicate column name")) {
             console.error("Error adding ipPortIndex column to domains table:", err.message);
