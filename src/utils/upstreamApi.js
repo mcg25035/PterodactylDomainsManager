@@ -152,8 +152,6 @@ module.exports = {
     },
 
     updateSubdomain: async function (fullDomain, newFullDomain, targetIp, ipPortIndex = 0) {
-        const isMcSubdomain = fullDomain.startsWith('mc');
-
         // When updating, we delete the old records first.
         await this.deleteSubdomain(fullDomain);
 
@@ -161,10 +159,12 @@ module.exports = {
         const creationResult = await this.createSubdomain(newFullDomain, targetIp, ipPortIndex);
         const updatedARecord = creationResult?.aRecord;
 
-        const updatedSrvRecord = isMcSubdomain ? await findDnsRecord(newFullDomain, 'SRV') : null;
+        let updatedSrvRecord = await findDnsRecord(newFullDomain, 'SRV');
 
 
-        if (!isMcSubdomain) return { aRecord: updatedARecord, srvRecord: null };
+        if (!updatedSrvRecord) {
+            updatedSrvRecord = await createSrvRecord(getRecordName(newFullDomain), ipPortIndex);
+        }
 
         return { aRecord: updatedARecord, srvRecord: updatedSrvRecord };
     },
