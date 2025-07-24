@@ -131,7 +131,7 @@ module.exports = {
         if (existingARecord) throw new Error(`Subdomain ${fullDomain} already exists.`);
 
         const recordName = getRecordName(fullDomain);
-        
+        const ipToUse = FIXED_ENDPOINTS[ipPortIndex].ip
         // TODO: check use direct or fixed endpoint by database
 
         const aRecordResponse = await cloudflareApi.post(`/zones/${CLOUDFLARE_ZONE_ID}/dns_records`, {
