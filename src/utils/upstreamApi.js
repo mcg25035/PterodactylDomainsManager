@@ -127,13 +127,12 @@ module.exports = {
             throw new Error(`Invalid IP/Port index: ${ipPortIndex}. Must be between 0 and ${FIXED_ENDPOINTS.length - 1}.`);
         }
 
-        const isMcSubdomain = fullDomain.startsWith('mc');
-
         const existingARecord = await findDnsRecord(fullDomain, 'A');
         if (existingARecord) throw new Error(`Subdomain ${fullDomain} already exists.`);
 
         const recordName = getRecordName(fullDomain);
-        const ipToUse = isMcSubdomain ? FIXED_ENDPOINTS[ipPortIndex].ip : targetIp;
+        
+        // TODO: check use direct or fixed endpoint by database
 
         const aRecordResponse = await cloudflareApi.post(`/zones/${CLOUDFLARE_ZONE_ID}/dns_records`, {
             type: 'A',
@@ -148,9 +147,6 @@ module.exports = {
         }
 
         const createdARecord = aRecordResponse.data.result;
-
-        if (!isMcSubdomain) return { aRecord: createdARecord, srvRecord: null };
-
         const createdSrvRecord = await createSrvRecord(recordName, ipPortIndex);
         return { aRecord: createdARecord, srvRecord: createdSrvRecord };
     },
