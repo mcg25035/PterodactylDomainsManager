@@ -116,10 +116,10 @@ const updateDomain = async (req, res) => {
     if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
     if (req.body.customDomain) return res.status(400).json({ message: 'Cannot update custom domain' });
 
-    const { ipPortIndex, ...domainData } = req.body;
+    const { ipPortIndex, serverPort, ...domainData } = req.body;
 
     try {
-        const updatedDomain = await domainService.updateDomain(id, domainData, ipPortIndex);
+        const updatedDomain = await domainService.updateDomain(id, domainData, ipPortIndex, serverPort);
         if (!updatedDomain) return res.status(404).json({ message: 'Domain not found' });
 
         return res.json({

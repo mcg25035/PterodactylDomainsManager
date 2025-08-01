@@ -55,11 +55,13 @@ const getRecordName = (fullDomain) => {
     return fullDomain; 
 };
 
-const createSrvRecord = async (recordName, portIndex = 0) => {
+const createSrvRecord = async (recordName, portIndex = 0, serverPort) => {
     if (portIndex < 0 || portIndex >= FIXED_ENDPOINTS.length) {
         throw new Error(`Invalid port index: ${portIndex}. Must be between 0 and ${FIXED_ENDPOINTS.length - 1}.`);
     }
-    const selectedPort = FIXED_ENDPOINTS[portIndex].port;
+
+    let selectedPort = portIndex < 0 ? serverPort : FIXED_ENDPOINTS[portIndex].port;
+
 
     const srvName = `_minecraft._tcp.${recordName}`;
     const srvTarget = `${recordName}.${ZONE_NAME}`;
@@ -122,7 +124,7 @@ const findDnsRecord = async (fullDomain, type = 'A') => {
 module.exports = {
     fetchAllDnsRecords: fetchDnsRecords,
 
-    createSubdomain: async function (fullDomain, targetIp, ipPortIndex = 0) {
+    createSubdomain: async function (fullDomain, targetIp, ipPortIndex = 0, serverPort) {
         if (ipPortIndex < 0 || ipPortIndex >= FIXED_ENDPOINTS.length) {
             throw new Error(`Invalid IP/Port index: ${ipPortIndex}. Must be between 0 and ${FIXED_ENDPOINTS.length - 1}.`);
         }
@@ -147,16 +149,16 @@ module.exports = {
         }
 
         const createdARecord = aRecordResponse.data.result;
-        const createdSrvRecord = await createSrvRecord(recordName, ipPortIndex);
+        const createdSrvRecord = await createSrvRecord(recordName, ipPortIndex, serverPort);
         return { aRecord: createdARecord, srvRecord: createdSrvRecord };
     },
 
-    updateSubdomain: async function (fullDomain, newFullDomain, targetIp, ipPortIndex = 0) {
+    updateSubdomain: async function (fullDomain, newFullDomain, targetIp, ipPortIndex = 0, serverPort) {
         // When updating, we delete the old records first.
         await this.deleteSubdomain(fullDomain);
 
         // Then create new records with potentially new IP/Port from the selected index
-        const creationResult = await this.createSubdomain(newFullDomain, targetIp, ipPortIndex);
+        const creationResult = await this.createSubdomain(newFullDomain, targetIp, ipPortIndex, serverPort);
         const updatedARecord = creationResult?.aRecord;
 
         let updatedSrvRecord = await findDnsRecord(newFullDomain, 'SRV');
