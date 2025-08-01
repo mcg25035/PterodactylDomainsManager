@@ -187,10 +187,18 @@ module.exports = {
     },
 
     getFixedEndpoints: function () {
-        return FIXED_ENDPOINTS.map((endpoint) => ({
-            ...endpoint,
-            index: endpoint.id
-        }));
+        return FIXED_ENDPOINTS.map((endpoint) => {
+            console.log(endpoint);
+
+            console.log({
+                ...endpoint,
+                index: endpoint.id
+            });
+            return {
+                ...endpoint,
+                index: endpoint.id
+            }
+        });
     },
 
 
