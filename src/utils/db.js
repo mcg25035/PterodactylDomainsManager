@@ -36,12 +36,59 @@ db.serialize(() => {
 
     db.run(`
         CREATE TABLE IF NOT EXISTS fixed_endpoints (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id INTEGER PRIMARY KEY,
             ip TEXT NOT NULL,
             port INTEGER NOT NULL,
             createdAt TEXT NOT NULL DEFAULT (datetime('now','localtime'))
         )
     `);
+    // Migration for fixed_endpoints table to remove AUTOINCREMENT from id
+    db.get("PRAGMA table_info(fixed_endpoints)", (err, row) => {
+        if (err) {
+            console.error("Error checking fixed_endpoints table info:", err.message);
+            return;
+        }
+        const idColumn = row.find(col => col.name === 'id');
+        if (idColumn && idColumn.pk === 1 && idColumn.type === 'INTEGER' && idColumn.autoinc === 1) {
+            console.log("Migrating fixed_endpoints table: 'id' column has AUTOINCREMENT. Removing it.");
+            db.serialize(() => {
+                db.run("ALTER TABLE fixed_endpoints RENAME TO fixed_endpoints_old", (err) => {
+                    if (err) {
+                        console.error("Error renaming fixed_endpoints table:", err.message);
+                        return;
+                    }
+                    db.run(`
+                        CREATE TABLE IF NOT EXISTS fixed_endpoints (
+                            id INTEGER PRIMARY KEY,
+                            ip TEXT NOT NULL,
+                            port INTEGER NOT NULL,
+                            createdAt TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+                        )
+                    `, (err) => {
+                        if (err) {
+                            console.error("Error creating new fixed_endpoints table:", err.message);
+                            return;
+                        }
+                        db.run("INSERT INTO fixed_endpoints (id, ip, port, createdAt) SELECT id, ip, port, createdAt FROM fixed_endpoints_old", (err) => {
+                            if (err) {
+                                console.error("Error copying data to new fixed_endpoints table:", err.message);
+                                return;
+                            }
+                            db.run("DROP TABLE fixed_endpoints_old", (err) => {
+                                if (err) {
+                                    console.error("Error dropping old fixed_endpoints table:", err.message);
+                                    return;
+                                }
+                                console.log("fixed_endpoints table migration complete: AUTOINCREMENT removed from 'id'.");
+                            });
+                        });
+                    });
+                });
+            });
+        } else {
+            console.log("fixed_endpoints table 'id' column does not have AUTOINCREMENT or table does not exist, skipping migration.");
+        }
+    });
 
     // Migration logic for FIXED_IP and FIXED_PORT from .env
     db.get("SELECT COUNT(*) AS count FROM fixed_endpoints", (err, row) => {

@@ -189,7 +189,6 @@ module.exports = {
     getFixedEndpoints: function () {
         return FIXED_ENDPOINTS.map((endpoint, index) => ({
             ...endpoint,
-            name: `Endpoint ${index + 1}`,
             index: index
         }));
     },
