@@ -43,12 +43,12 @@ db.serialize(() => {
         )
     `);
     // Migration for fixed_endpoints table to remove AUTOINCREMENT from id
-    db.get("PRAGMA table_info(fixed_endpoints)", (err, row) => {
+    db.all("PRAGMA table_info(fixed_endpoints)", (err, rows) => {
         if (err) {
             console.error("Error checking fixed_endpoints table info:", err.message);
             return;
         }
-        const idColumn = row.find(col => col.name === 'id');
+        const idColumn = rows.find(col => col.name === 'id');
         if (idColumn && idColumn.pk === 1 && idColumn.type === 'INTEGER' && idColumn.autoinc === 1) {
             console.log("Migrating fixed_endpoints table: 'id' column has AUTOINCREMENT. Removing it.");
             db.serialize(() => {
