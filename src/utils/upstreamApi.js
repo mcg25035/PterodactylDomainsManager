@@ -15,7 +15,7 @@ let FIXED_ENDPOINTS = [];
 
 const getFixedEndpointsFromDb = () => {
     return new Promise((resolve, reject) => {
-        db.all("SELECT ip, port FROM fixed_endpoints ORDER BY id ASC", (err, rows) => {
+        db.all("SELECT * FROM fixed_endpoints ORDER BY id ASC", (err, rows) => {
             if (err) {
                 reject(err);
             } else {
