@@ -121,7 +121,7 @@ const findDnsRecord = async (fullDomain, type = 'A') => {
 module.exports = {
     fetchAllDnsRecords: fetchDnsRecords,
 
-    createSubdomain: async function (fullDomain, targetIp, ipPortIndex = 0, serverPort) {
+    createSubdomain: async function (fullDomain, targetIp, ipPortIndex = 2, serverPort) {
         // if (ipPortIndex < 0 || ipPortIndex >= FIXED_ENDPOINTS.length) {
         //     throw new Error(`Invalid IP/Port index: ${ipPortIndex}. Must be between 0 and ${FIXED_ENDPOINTS.length - 1}.`);
         // }
