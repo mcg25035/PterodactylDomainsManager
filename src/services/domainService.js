@@ -137,15 +137,17 @@ function getAddress(ipPortIndex, serverPort) {
 	return { ip, port };
 }
 
-async function updateDomain(id, updatedData, ipPortIndex = null, serverPort) { // Added ipPortIndex, default to 0
+async function updateDomain(id, updatedData) { 
     const domain = await getDomainById(id);
     if (!domain) return null;
 
     const originalFullDomain = domain.customDomain || `${domain.thirdLevelDomain}.${defaultSuffix}`;
     const newThirdLevelDomain = updatedData.thirdLevelDomain || domain.thirdLevelDomain;
     const newFullDomain = updatedData.customDomain || `${newThirdLevelDomain}.${defaultSuffix}`; // Custom domains cannot be updated via this method based on controller logic
-    
-    ipPortIndex = (ipPortIndex == null) ? (domain.ipPortIndex ?? 0) : ipPortIndex;
+    const serverPort = updatedData.serverPort || domain.targetPort;
+    const ipPortIndex = (updatedData.ipPortIndex == null) ? (domain.ipPortIndex ?? 2) : updatedData.ipPortIndex;
+    const useSrvRecord = ((ipPortIndex < 0) ? updatedData.useSrvRecord : true) ?? true;
+
     const otherData = updatedData.otherData ? JSON.stringify(updatedData.otherData) : domain.otherData;
 
     const { ip: targetIp, port: targetPort } = getAddress(ipPortIndex, serverPort);
@@ -157,7 +159,7 @@ async function updateDomain(id, updatedData, ipPortIndex = null, serverPort) { /
     }
     try {
         // Pass ipPortIndex to upstreamApi.updateSubdomain
-        updatedRecords = await upstreamApi.updateSubdomain(originalFullDomain, newFullDomain, targetIp, targetPort);        
+        updatedRecords = await upstreamApi.updateSubdomain(originalFullDomain, newFullDomain, targetIp, targetPort, useSrvRecord);    
     } catch (error) {
         throw new Error(`Error updating domain DNS records: ${error.message}`);
     }
