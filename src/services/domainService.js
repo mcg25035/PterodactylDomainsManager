@@ -51,11 +51,18 @@ async function createDomain(domainData) {
     console.log(domainData.customDomain);
     const fullDomain = domainData.customDomain ? domainData.customDomain : `${domainData.thirdLevelDomain}.${defaultSuffix}`;
 
+    let { targetIp: ipToUse, targetPort: portToUse } = domainData;
+    if (!domainData.customDomain) {
+        let { ip, port } = getAddress(2, domainData.targetPort);
+        ipToUse = ip;
+        portToUse = port;
+    }
+
     const id = uuidv4();
     let createdRecords = {};
     if (!domainData.customDomain) {
         try {
-            createdRecords = await upstreamApi.createSubdomain(fullDomain, domainData.targetIp);
+            createdRecords = await upstreamApi.createSubdomain(fullDomain, ipToUse, portToUse);
         } catch (error) {
             throw new Error(`Error creating domain: ${error.message}`);
         }
@@ -69,8 +76,8 @@ async function createDomain(domainData) {
                 id,
                 domainData.serverId,
                 domainData.thirdLevelDomain,
-                domainData.targetIp,
-                domainData.targetPort,
+                ipToUse,
+                portToUse,
                 createdRecords.aRecord ? createdRecords.aRecord.id : null,
                 createdRecords.srvRecord ? createdRecords.srvRecord.id : null,
                 JSON.stringify(domainData.otherData || {}),
