@@ -55,11 +55,7 @@ const getRecordName = (fullDomain) => {
     return fullDomain; 
 };
 
-const createSrvRecord = async (recordName, portIndex = 0, port) => {
-    if (portIndex < 0 || portIndex >= FIXED_ENDPOINTS.length) {
-        throw new Error(`Invalid port index: ${portIndex}. Must be between 0 and ${FIXED_ENDPOINTS.length - 1}.`);
-    }
-
+const createSrvRecord = async (recordName, port) => {
     const srvName = `_minecraft._tcp.${recordName}`;
     const srvTarget = `${recordName}.${ZONE_NAME}`;
     const srvData = {
@@ -93,6 +89,7 @@ const createSrvRecord = async (recordName, portIndex = 0, port) => {
     }
 };
 
+
 const deleteSrvRecord = async (existingRecord) => {
     const response = await cloudflareApi.delete(`/zones/${CLOUDFLARE_ZONE_ID}/dns_records/${existingRecord.id}`);
 
@@ -118,44 +115,21 @@ const findDnsRecord = async (fullDomain, type = 'A') => {
     }) || null;
 };
 
+
+
 module.exports = {
     fetchAllDnsRecords: fetchDnsRecords,
 
-    createSubdomain: async function (fullDomain, targetIp, ipPortIndex = 2, serverPort) {
-        // if (ipPortIndex < 0 || ipPortIndex >= FIXED_ENDPOINTS.length) {
-        //     throw new Error(`Invalid IP/Port index: ${ipPortIndex}. Must be between 0 and ${FIXED_ENDPOINTS.length - 1}.`);
-        // }
-        
-        let ip = null;
-        let port = null;
-        FIXED_ENDPOINTS.forEach((endpoint) => {
-            console.log(endpoint.id)
-            console.log(ipPortIndex)
-
-            if (endpoint.id !== ipPortIndex) return;
-            if (ipPortIndex < 0) port = serverPort;
-            else port = endpoint.port;
-
-            ip = endpoint.ip;
-            console.log(`Using fixed endpoint: ${endpoint.ip}:${endpoint.port}`);
-        });
-
-        
-
-        if (!ip) throw new Error(`Invalid IP/Port index: ${ipPortIndex}.`);
-        if (!port) throw new Error(`Invalid port for index: ${ipPortIndex}.`);
-
+    createSubdomain: async function (fullDomain, ip, port) {
         const existingARecord = await findDnsRecord(fullDomain, 'A');
         if (existingARecord) throw new Error(`Subdomain ${fullDomain} already exists.`);
 
         const recordName = getRecordName(fullDomain);
-        const ipToUse = ip
-        // TODO: check use direct or fixed endpoint by database
 
         const aRecordResponse = await cloudflareApi.post(`/zones/${CLOUDFLARE_ZONE_ID}/dns_records`, {
             type: 'A',
             name: recordName,
-            content: ipToUse,
+            content: ip,
             ttl: 1,
             proxied: false,
         });
@@ -165,31 +139,28 @@ module.exports = {
         }
 
         const createdARecord = aRecordResponse.data.result;
-        const createdSrvRecord = await createSrvRecord(recordName, ipPortIndex, port);
+        const createdSrvRecord = await createSrvRecord(recordName, port);
         return { aRecord: createdARecord, srvRecord: createdSrvRecord };
     },
 
-    updateSubdomain: async function (fullDomain, newFullDomain, targetIp, ipPortIndex = 0, serverPort) {
-        // When updating, we delete the old records first.
+    updateSubdomain: async function (fullDomain, newFullDomain, targetIp, targetPort, createSrvRecord = true) {
         await this.deleteSubdomain(fullDomain);
 
-        // Then create new records with potentially new IP/Port from the selected index
-        const creationResult = await this.createSubdomain(newFullDomain, targetIp, ipPortIndex, serverPort);
+        const creationResult = await this.createSubdomain(newFullDomain, targetIp, targetPort);
         const updatedARecord = creationResult?.aRecord;
 
+		if (!createSrvRecord) return { aRecord: updatedARecord, srvRecord: null };
+
+
         let updatedSrvRecord = await findDnsRecord(newFullDomain, 'SRV');
-
-
         if (!updatedSrvRecord) {
-            updatedSrvRecord = await createSrvRecord(getRecordName(newFullDomain), ipPortIndex);
+            updatedSrvRecord = await createSrvRecord(getRecordName(newFullDomain), targetPort);
         }
 
         return { aRecord: updatedARecord, srvRecord: updatedSrvRecord };
     },
 
     deleteSubdomain: async function (fullDomain) {
-        const isMcSubdomain = fullDomain.startsWith('mc');
-
         const existingARecord = await findDnsRecord(fullDomain, 'A');
         if (!existingARecord) throw new Error(`Subdomain ${fullDomain} does not exist.`);
 
@@ -197,8 +168,6 @@ module.exports = {
         if (!aRecordResponse.data.success) {
             throw new Error(aRecordResponse.data.errors.map((e) => e.message).join(', '));
         }
-
-        if (!isMcSubdomain) return;
 
         const existingSrvRecord = await findDnsRecord(fullDomain, 'SRV');
         if (existingSrvRecord) await deleteSrvRecord(existingSrvRecord);

@@ -96,6 +96,40 @@ async function createDomain(domainData) {
     });
 }
 
+/**
+ * @typedef {Object} Address
+ * @property {string} ip - The IP address.
+ * @property {number} port - The port number.
+ */
+
+/**
+ * @param {number} ipPortIndex 
+ * @param {number} serverPort
+ * 
+ * @returns {Address}
+ */
+function getAddress(ipPortIndex, serverPort) {
+    let ip = null;
+    let port = null;
+    upstreamApi.getFixedEndpoints().forEach((endpoint) => {
+        console.log(endpoint.id)
+        console.log(ipPortIndex)
+
+        if (endpoint.id !== ipPortIndex) return;
+
+        if (ipPortIndex < 0) port = serverPort;
+        else port = endpoint.port;
+
+        ip = endpoint.ip;
+        console.log(`Using fixed endpoint: ${endpoint.ip}:${endpoint.port}`);
+    });
+
+	if (!ip) throw new Error(`Invalid IP/Port index: ${ipPortIndex}.`);
+	if (!port) throw new Error(`Invalid port for index: ${ipPortIndex}.`);
+
+	return { ip, port };
+}
+
 async function updateDomain(id, updatedData, ipPortIndex = null, serverPort) { // Added ipPortIndex, default to 0
     const domain = await getDomainById(id);
     if (!domain) return null;
@@ -103,10 +137,11 @@ async function updateDomain(id, updatedData, ipPortIndex = null, serverPort) { /
     const originalFullDomain = domain.customDomain || `${domain.thirdLevelDomain}.${defaultSuffix}`;
     const newThirdLevelDomain = updatedData.thirdLevelDomain || domain.thirdLevelDomain;
     const newFullDomain = updatedData.customDomain || `${newThirdLevelDomain}.${defaultSuffix}`; // Custom domains cannot be updated via this method based on controller logic
-    const targetIp = updatedData.targetIp || domain.targetIp;
-    const targetPort = updatedData.targetPort || domain.targetPort;
+    
     ipPortIndex = (ipPortIndex == null) ? (domain.ipPortIndex ?? 0) : ipPortIndex;
     const otherData = updatedData.otherData ? JSON.stringify(updatedData.otherData) : domain.otherData;
+
+    const { ip: targetIp, port: targetPort } = getAddress(ipPortIndex, serverPort);
 
     let updatedRecords;
     // Only call upstreamApi if it's not a custom domain being managed externally
@@ -115,7 +150,7 @@ async function updateDomain(id, updatedData, ipPortIndex = null, serverPort) { /
     }
     try {
         // Pass ipPortIndex to upstreamApi.updateSubdomain
-        updatedRecords = await upstreamApi.updateSubdomain(originalFullDomain, newFullDomain, targetIp, ipPortIndex, serverPort);        
+        updatedRecords = await upstreamApi.updateSubdomain(originalFullDomain, newFullDomain, targetIp, targetPort);        
     } catch (error) {
         throw new Error(`Error updating domain DNS records: ${error.message}`);
     }
