@@ -70,6 +70,7 @@ const getDomainById = async (req, res) => {
             targetIp: domain.targetIp,
             targetPort: domain.targetPort,
             ipPortIndex: domain.ipPortIndex, // Include ipPortIndex
+            useSRV: domain.cloudflareSrvRecordId ? true : false, 
             ...JSON.parse(domain.otherData || '{}')
         });
     } catch (error) {
