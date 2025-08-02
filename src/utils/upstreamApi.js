@@ -129,6 +129,9 @@ module.exports = {
         let ip = null;
         let port = null;
         FIXED_ENDPOINTS.forEach((endpoint) => {
+            console.log(endpoint.id)
+            console.log(ipPortIndex)
+
             if (endpoint.id !== ipPortIndex) return;
             if (ipPortIndex < 0) port = serverPort;
             else port = endpoint.port;
