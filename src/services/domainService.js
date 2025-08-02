@@ -141,6 +141,8 @@ async function updateDomain(id, updatedData) {
     const domain = await getDomainById(id);
     if (!domain) return null;
 
+    console.log(JSON.stringify(updatedData, null, 2));
+
     const originalFullDomain = domain.customDomain || `${domain.thirdLevelDomain}.${defaultSuffix}`;
     const newThirdLevelDomain = updatedData.thirdLevelDomain || domain.thirdLevelDomain;
     const newFullDomain = updatedData.customDomain || `${newThirdLevelDomain}.${defaultSuffix}`; // Custom domains cannot be updated via this method based on controller logic
