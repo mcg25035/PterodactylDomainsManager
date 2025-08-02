@@ -82,7 +82,7 @@ async function createDomain(domainData) {
                 createdRecords.srvRecord ? createdRecords.srvRecord.id : null,
                 JSON.stringify(domainData.otherData || {}),
                 domainData.customDomain || null,
-                0 // Default ipPortIndex to 0 for new creations
+                2
             ],
             (err) => {
                 if (err) return reject(err);
@@ -96,7 +96,7 @@ async function createDomain(domainData) {
                     cloudflareARecordId: createdRecords.aRecord ? createdRecords.aRecord.id : null,
                     cloudflareSrvRecordId: createdRecords.srvRecord ? createdRecords.srvRecord.id : null,
                     customDomain: domainData.customDomain || null,
-                    ipPortIndex: 0 // Default ipPortIndex to 0 for new creations
+                    ipPortIndex: 2
                 });
             }
         );
