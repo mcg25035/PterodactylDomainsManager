@@ -55,13 +55,10 @@ const getRecordName = (fullDomain) => {
     return fullDomain; 
 };
 
-const createSrvRecord = async (recordName, portIndex = 0, serverPort) => {
+const createSrvRecord = async (recordName, portIndex = 0, port) => {
     if (portIndex < 0 || portIndex >= FIXED_ENDPOINTS.length) {
         throw new Error(`Invalid port index: ${portIndex}. Must be between 0 and ${FIXED_ENDPOINTS.length - 1}.`);
     }
-
-    let selectedPort = portIndex < 0 ? serverPort : FIXED_ENDPOINTS[portIndex].port;
-
 
     const srvName = `_minecraft._tcp.${recordName}`;
     const srvTarget = `${recordName}.${ZONE_NAME}`;
@@ -71,7 +68,7 @@ const createSrvRecord = async (recordName, portIndex = 0, serverPort) => {
         name: recordName,
         priority: 0,
         weight: 5,
-        port: selectedPort,
+        port: port,
         target: `${srvTarget}.`
     };
 
@@ -125,15 +122,31 @@ module.exports = {
     fetchAllDnsRecords: fetchDnsRecords,
 
     createSubdomain: async function (fullDomain, targetIp, ipPortIndex = 0, serverPort) {
-        if (ipPortIndex < 0 || ipPortIndex >= FIXED_ENDPOINTS.length) {
-            throw new Error(`Invalid IP/Port index: ${ipPortIndex}. Must be between 0 and ${FIXED_ENDPOINTS.length - 1}.`);
-        }
+        // if (ipPortIndex < 0 || ipPortIndex >= FIXED_ENDPOINTS.length) {
+        //     throw new Error(`Invalid IP/Port index: ${ipPortIndex}. Must be between 0 and ${FIXED_ENDPOINTS.length - 1}.`);
+        // }
+        
+        let ip = null;
+        let port = null;
+        FIXED_ENDPOINTS.forEach((endpoint) => {
+            if (endpoint.id !== ipPortIndex) return;
+            if (ipPortIndex < 0) port = serverPort;
+            else port = endpoint.port;
+
+            ip = endpoint.ip;
+            console.log(`Using fixed endpoint: ${endpoint.ip}:${endpoint.port}`);
+        });
+
+        
+
+        if (!ip) throw new Error(`Invalid IP/Port index: ${ipPortIndex}.`);
+        if (!port) throw new Error(`Invalid port for index: ${ipPortIndex}.`);
 
         const existingARecord = await findDnsRecord(fullDomain, 'A');
         if (existingARecord) throw new Error(`Subdomain ${fullDomain} already exists.`);
 
         const recordName = getRecordName(fullDomain);
-        const ipToUse = FIXED_ENDPOINTS[ipPortIndex].ip
+        const ipToUse = ip
         // TODO: check use direct or fixed endpoint by database
 
         const aRecordResponse = await cloudflareApi.post(`/zones/${CLOUDFLARE_ZONE_ID}/dns_records`, {
@@ -149,7 +162,7 @@ module.exports = {
         }
 
         const createdARecord = aRecordResponse.data.result;
-        const createdSrvRecord = await createSrvRecord(recordName, ipPortIndex, serverPort);
+        const createdSrvRecord = await createSrvRecord(recordName, ipPortIndex, port);
         return { aRecord: createdARecord, srvRecord: createdSrvRecord };
     },
 
